@@ -1,0 +1,23 @@
+# Architecture — implementation-independent evidence
+
+```text
+Node.js test runner (GitHub-hosted Ubuntu, Node 22)
+    |
+    +-- python scripts/s7_probe.py (hardcoded 127.0.0.1, no host argument)
+    |       | TCP/COTP/S7Comm
+    |       v
+    +-- lib/wire-peer.cjs (loopback TCP observer, optional fault injection)
+            | TCP/COTP/S7Comm
+            v
+        fixtures/s7_server.py (python-snap7==3.3.1, ephemeral port)
+            +-- DB1: 2048 disposable synthetic bytes
+```
+
+## Stage 1 — instrument validation
+The probe checks REAL0 12.5, INT4 -123 and REAL8 3.25, writes REAL8 19.75 and checks the exact readback and unrelated fields. The proxy independently counts COTP handshakes, READ_VAR, WRITE_VAR and packet observer errors. A local negative-control suite checks observation of truncated frames without out-of-bounds access.
+
+## Stage 2 — candidate adapters
+Run *unmodified released binaries* and a source-pinned candidate under a genuine, unmodified Node-RED host. Do not use fake Rust NAPI libraries in external comparison tests. Keep the lab's health status green even when an installed candidate correctly fails its separate behavioral gate; never report an unsafe candidate as release-qualified.
+
+## Non-goals
+Hardware qualification, generic PLC tooling, source code of third-party S7 drivers, production certificates, industrial logs, network access to physical controllers and release/publish automation. Performance metrics require their own repeatable measurements and cannot be inferred from smoke tests.
