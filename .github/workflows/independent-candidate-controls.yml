@@ -1,0 +1,63 @@
+name: Published JavaScript and Rust positive S7Comm controls (not qualification)
+on: [pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  published-implementations:
+    name: Published JS 4.4.1 vs Rust 1.4.0 common healthy S7 read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.4'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Install hashed synthetic software fixture
+        run: >-
+          python -m pip install --disable-pip-version-check --only-binary=:all: --require-hashes -r requirements/python-snap7.txt
+      - name: Install exact published Node-RED and two competing OSS S7 nodes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check test/candidates/common-node-red-s7-read.cjs
+          mkdir -p .candidate-consumer
+          printf '%s\n' '{"name":"disposable-s7-common-comparison","version":"0.0.0","private":true}' > .candidate-consumer/package.json
+          npm install --prefix .candidate-consumer --ignore-scripts --no-audit --no-fund --save-exact \
+            node-red@5.0.9 node-red-node-test-helper@0.3.6 \
+            @oriolrius/node-red-contrib-s7@4.4.1 node-red-contrib-s7-rust@1.4.0
+          node - <<'NODE'
+          const fs=require("node:fs"),crypto=require("node:crypto");
+          const lockBytes=fs.readFileSync(".candidate-consumer/package-lock.json");
+          const lock=JSON.parse(lockBytes);
+          for(const [name,version] of Object.entries({
+            "node-red":"5.0.9","node-red-node-test-helper":"0.3.6",
+            "@oriolrius/node-red-contrib-s7":"4.4.1",
+            "node-red-contrib-s7-rust":"1.4.0"
+          })){
+            const p=lock.packages["node_modules/"+name];
+            if(!p||p.version!==version||!p.integrity||
+               !p.resolved?.startsWith("https://registry.npmjs.org/"))
+              throw Error("Not the expected published package: "+name);
+            console.log("PUBLISHED_S7_PACKAGE="+name+"@"+version+" "+p.integrity);
+          }
+          const dep=lock.packages["node_modules/@oriolrius/nodes7"];
+          if(!dep||!dep.integrity)throw Error("Published JavaScript S7 transport missing");
+          console.log("JS_TRANSPORT_REF="+dep.version+" "+dep.integrity);
+          console.log("NPM_CONSUMER_LOCK_SHA256="+crypto.createHash("sha256").update(lockBytes).digest("hex"));
+          NODE
+      - name: Compare independent native and JS engines on identical loopback fixture
+        run: node test/candidates/common-node-red-s7-read.cjs .candidate-consumer
+        timeout-minutes: 6
+      - name: Retain exact healthy-path comparison evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: published-javascript4.4.1-vs-rust1.4.0-control
+          path: test-reports/common-s7-compare.json
+          if-no-files-found: warn
+          retention-days: 14
