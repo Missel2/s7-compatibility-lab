@@ -126,6 +126,44 @@ function collate(inputs, head) {
    rust:'node-red-contrib-s7-rust@1.4.0',nodeRed:'5.0.9'},
   strictCandidateFailuresPreserved:true,independentInstrumentControlsPassed:true,cells};
 }
+// Bind summaries to the actual original report bytes in THIS run. The original
+// candidate safety assertions are still authoritative and have already run.
+function verifyRawLinks(inputs, reportDir, head){
+ const expected=new Map();
+ function add(file,claimedDigest=null) {
+  assert.match(file,/^[a-zA-Z0-9_.-]+\\.json$/,'Unsafe or missing original filename');
+  if(expected.has(file)){
+   if(claimedDigest!==null)assert.equal(expected.get(file),claimedDigest);
+   return;
+  }
+  expected.set(file,claimedDigest);
+ }
+ add('common-s7-compare.json',inputs.read.positiveControl?.reportSha256);
+ add('published-js-three-byte-write.json',inputs.write.reportSha256);
+ for(const r of inputs.read.results)add(r.report,r.reportSha256);
+ const rustMap={
+  correct_header_rejection:'malformed-read-rust-inconsistent_data_length.json',
+  wrong_pdu_reference:'malformed-read-rust-wrong_pdu_reference.json',
+  lost_write_ack_and_teardown:'rust-s7-ci-parity.json'
+ };
+ for(const r of inputs.rust.outputs){
+  assert.equal(r.report,rustMap[r.name],'Original Rust report misassociated with a behavior');
+  add(r.report);
+ }
+ assert.equal(expected.size,8,'Exactly 8 actual positive/strict candidate report files required');
+ const result={};
+ for(const [name,claimed] of expected){
+  const raw=fs.readFileSync(path.join(reportDir,name));
+  const record=JSON.parse(raw);
+  assert.ok(record && typeof record==='object' && !Array.isArray(record),'Malformed original JSON '+name);
+  if(record.sourceCommit!==undefined)assert.equal(record.sourceCommit,head,name+' stale original report');
+  const actual=digest(raw);
+  if(claimed!==null)assert.equal(claimed,actual,'Summary digest does not match original JSON bytes: '+name);
+  result[name]=actual;
+ }
+ return result;
+}
+
 function main(){
  const head=process.env.GITHUB_SHA;
  assert.match(head||'',SHA,'GITHUB_SHA must pin an actual CI run');
@@ -136,6 +174,7 @@ function main(){
  const inputs={positive:JSON.parse(bytes[0]),write:JSON.parse(bytes[1]),read:JSON.parse(bytes[2]),
   rust:JSON.parse(bytes[3]),lockBytes:fs.readFileSync(path.join(root,'.candidate-consumer/package-lock.json'))};
  const result=collate(inputs,head);
+ result.originalStrictReportHashes=verifyRawLinks(inputs,dir,head);
  result.inputReports=Object.fromEntries(names.map((n,i)=>[n,digest(bytes[i])]));
  result.ciRun=process.env.GITHUB_RUN_ID||null;
  result.candidateOutputsNotQualified=true;
@@ -144,4 +183,4 @@ function main(){
   knownUnsafe:result.cells.filter(x=>x.outcome==='KNOWN_UNSAFE').length,candidateQualified:false}));
 }
 if(require.main===module){try{main()}catch(e){console.error('LIVE_COMPARISON_RED '+String(e.stack||e));process.exitCode=1}}
-module.exports={collate};
+module.exports={collate,verifyRawLinks};
