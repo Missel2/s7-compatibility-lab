@@ -15,3 +15,13 @@ Probe crash, timeout, inconclusive readback, missing positive controls, missing 
 **Version boundary:** The historical `S7-ERR-001` concerns an earlier `@missel2/node-red-contrib-s7@0.1.0-alpha.2` build. This **different** `@oriolrius` version 4.4.1 is initially assessed as a new observed candidate and does not retroactively prove or disprove the alpha result. Contract registry S7-ERR-001 stays `HISTORICAL_ONLY` until exact historical build execution has its own result.
 
 Linux x64 software-only; HIL remains `PENDING_HARDWARE`. The observed TCP hashes belong to the local relay; they are not signed or hardware-verified.
+
+## First published JS 4.4.1 loopback result
+
+At exact PR head `307ed5f2530db84a7c6ff945956c69819c465840`, [GitHub Actions #43956667972](https://github.com/Missel2/s7-compatibility-lab/actions/runs/43956667972) completed its candidate characterization successfully. The strict original `test/candidates/published-js-three-byte-write.cjs` exited **0** and the independent assessor reported:
+
+```json
+{"classification":"COMPLETE_WRITE_OBSERVED","candidateExit":0,"appliedBytes":3,"observedWrites":1,"readback":[15,29,43]}
+```
+
+The reported outcome is a **scoped positive result only** for the published `@oriolrius` 4.4.1 build, not for historical alpha `@missel2` 0.1.0-alpha.2 or for any other S7Comm contract. Historical `S7-ERR-001` remains unverified in this lab and its earlier issue is not deleted or reclassified. The real evidence and hashed wire report live in the CI artifact, not this documentation excerpt.
