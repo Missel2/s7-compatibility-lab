@@ -71,7 +71,7 @@ test('real historical alpha2 wire regression is distinct from modern published J
   assert.equal(historic.version,'0.1.0-alpha.2');
   assert.equal(historic.status,'PR_OPEN_UNQUALIFIED');
   assert.match(historic.lab_evidence,/\/s7-compatibility-lab\/actions\/runs\/43959037772$/);
-  assert.match(historic.notes,/iso-on-tcp 0\.1\.1/);
+  assert.match(historic.notes,/consumer resolved 0\.1\.1/);
   assert.match(historic.notes,/\[15,11,13\]/);
   assert.equal(historic.candidate_qualified,false);
   const modern=registry.contracts.find(c=>c.id==='S7-ERR-006');
