@@ -24,3 +24,7 @@ Both GPL-3.0-or-later candidate test files are adapted from the same [exact form
 | `test/candidates/rust-fault-parity.cjs` | `test/comparison/rust-ci-parity.cjs` | independent proxy and server paths |
 
 `scripts/assess-rust-v1.4.0.cjs`, assessment tests and standalone workflow are new; they do not incorporate native Rust source. Published Rust is installed separately from npm, unmodified, under its own LGPL-3.0-only license. The repo itself stays GPL-3.0-or-later.
+
+## Phase 2: two-published-implementation positive control
+
+The GPL-3.0-or-later file `test/candidates/common-node-red-s7-read.cjs` derives from [`Missel2/node-red-contrib-s7/test/comparison/common-s7-read.cjs` at exact source SHA e94bb29490f8ecfd22fdc7f6cf4e6e012e784393](https://github.com/Missel2/node-red-contrib-s7/blob/e94bb29490f8ecfd22fdc7f6cf4e6e012e784393/test/comparison/common-s7-read.cjs). Changes: replace the former source-packed `@missel2` wrapper with the real published independent `@oriolrius/node-red-contrib-s7@4.4.1`, update fixture path, update expected version, and explicitly label a *healthy-path positive control*, not a candidate qualification. No third-party driver code is vendored. The published JavaScript transport dependency `@oriolrius/nodes7` is resolved from npm and its effective exact version + SRI are recorded by CI.
