@@ -88,6 +88,7 @@ jobs:
              dep.integrity!=='sha512-4Lmejz+WT5YOLHBXfdSForyHltgct5A9J1indi0Q/sxZKpGIY2omRrjSMRU6fKeW6YDAb+jwAjjEz7hQE/Z9pQ==')
             throw Error('Historical @missel2/nodes7 alpha2 transport is not original published package');
           const iso=lock['node_modules/iso-on-tcp'];
+          console.log('ACTUAL_ISO_ON_TCP_LOCK='+JSON.stringify(iso));
           if(iso?.version!=='0.1.0'||iso.integrity!=='sha512-ty4/0A+4qW35QoPE74GfUiMtIBtTN4ZENNqfD0+5GQIoOnjLvmzCC1pCRWwlhopdSGZGmza9bBxdOuVmzlpN7g==')
             throw Error('Historical iso-on-tcp integrity differs');
           console.log('HISTORICAL_TRANSPORT_SRI='+dep.integrity);
