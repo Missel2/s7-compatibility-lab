@@ -28,7 +28,7 @@ jobs:
           node --check scripts/assess-rust-v1.4.0.cjs
           node --check test/candidates/rust-malformed-read.cjs
           node --check test/candidates/rust-fault-parity.cjs
-          node --test test/rust-baseline-assessor.test.cjs
+          node --test test/rust-baseline-assessor.test.cjs test/rust-contract-evidence.test.cjs
       - name: Install real unmodified Node-RED 5 and released native Rust v1.4.0
         shell: bash
         run: |
@@ -61,6 +61,8 @@ jobs:
       - name: Characterize real Rust wrong-ref, lost-write-ACK and teardown failures
         run: node scripts/assess-rust-v1.4.0.cjs
         timeout-minutes: 10
+      - name: Bind actual unsafe reports to stable S7 contract IDs (not qualification)
+        run: node scripts/export-rust-contract-evidence.cjs
       - name: Always retain candidate behavior and observer reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
