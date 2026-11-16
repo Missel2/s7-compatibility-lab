@@ -2,7 +2,11 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {collate}=require('../scripts/collate-live-comparison.cjs');
+const {collate,verifyRawLinks}=require('../scripts/collate-live-comparison.cjs');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const crypto=require('node:crypto');
 const sha='a'.repeat(40);
 const hash='b'.repeat(64);
 const packages=Object.fromEntries([
@@ -77,4 +81,29 @@ test('false source HEAD, duplicate and invalid candidate identity fail closed',(
  assert.throws(()=>collate(mutated(x=>x.rust.outputs.push({...x.rust.outputs[0]})),sha));
  assert.throws(()=>collate(mutated(x=>x.rust.candidate='fake-rust'),sha));
  assert.throws(()=>collate(mutated(x=>x.read.sourceCommit='c'.repeat(40)),sha));
+});
+
+test('direct raw evidence hashes bind all eight strict original candidate JSON files',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'s7-same-run-evidence-'));
+ const d=specimen();
+ const sha256=b=>crypto.createHash('sha256').update(b).digest('hex');
+ function write(name){const b=Buffer.from(JSON.stringify({sourceCommit:sha,actual:'real-original-test-report'}));fs.writeFileSync(path.join(dir,name),b);return sha256(b);}
+ try {
+  d.read.positiveControl={reportSha256:write('common-s7-compare.json')};
+  d.write.reportSha256=write('published-js-three-byte-write.json');
+  for(const r of d.read.results){r.report='published-js-malformed-read-js-'+r.fault+'.json';r.reportSha256=write(r.report)}
+  const rustFiles=['malformed-read-rust-inconsistent_data_length.json','malformed-read-rust-wrong_pdu_reference.json','rust-s7-ci-parity.json'];
+  d.rust.outputs.forEach((x,i)=>{x.report=rustFiles[i];write(x.report)});
+  assert.equal(Object.keys(verifyRawLinks(d,dir,sha)).length,8);
+  fs.writeFileSync(path.join(dir,'published-js-three-byte-write.json'),'{"sourceCommit":"'+sha+'","modified":true}');
+  assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match/);
+  d.write.reportSha256=sha256(fs.readFileSync(path.join(dir,'published-js-three-byte-write.json')));
+  fs.rmSync(path.join(dir,'malformed-read-rust-wrong_pdu_reference.json'));
+  assert.throws(()=>verifyRawLinks(d,dir,sha),/ENOENT/);
+ } finally {fs.rmSync(dir,{recursive:true,force:true})}
+});
+test('evidence binder refuses source mismatch or directory traversal instead of silently skipping',()=>{
+ const d=specimen();d.read.positiveControl={reportSha256:hash};
+ d.read.results[0].report='../external.json';
+ assert.throws(()=>verifyRawLinks(d,'/tmp/never-create-this',sha));
 });
