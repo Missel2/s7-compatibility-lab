@@ -14,17 +14,17 @@ function safe(fault='inconsistent_data_length'){
  proxyDiagnostics:{errors:[],mutationStillArmed:null}};
 }
 test('strict safe case does not grant candidate qualification',()=>{
- assert.deepEqual(verifyFault(safe(),'inconsistent_data_length'),
+ assert.deepEqual(verifyFault(safe(),'inconsistent_data_length',commit),
  {classification:'NO_INVALID_FRESH_OBSERVED',candidateExit:0});
 });
 test('wrong PDU reference with unsafe value requires exact strict candidate failure',()=>{
  const d=safe('wrong_pdu_reference');Object.assign(d,{verdict:'failed',readRequests:1,
  unverifiedFreshValues:true,readFaultClassification:'KNOWN_UNSAFE',
  error:'AssertionError: cannot accept corrupted single READ_VAR reply as valid fresh data'});
- assert.deepEqual(verifyFault(d,'wrong_pdu_reference'),{classification:'KNOWN_UNSAFE',candidateExit:1});
- assert.throws(()=>verifyFault({...d,readRequests:2},'wrong_pdu_reference'));
- assert.throws(()=>verifyFault({...d,error:'HARNESS_TIMEOUT'},'wrong_pdu_reference'));
- assert.throws(()=>verifyFault({...d,unverifiedFreshValues:false},'wrong_pdu_reference'));
+ assert.deepEqual(verifyFault(d,'wrong_pdu_reference',commit),{classification:'KNOWN_UNSAFE',candidateExit:1});
+ assert.throws(()=>verifyFault({...d,readRequests:2},'wrong_pdu_reference',commit));
+ assert.throws(()=>verifyFault({...d,error:'HARNESS_TIMEOUT'},'wrong_pdu_reference',commit));
+ assert.throws(()=>verifyFault({...d,unverifiedFreshValues:false},'wrong_pdu_reference',commit));
 });
 test('rejects omitted injection, stale source, cleanup failure and fabricated results',()=>{
  const d=safe();
@@ -38,12 +38,12 @@ test('rejects omitted injection, stale source, cleanup failure and fabricated re
  {...d,mutation:{...d.mutation,deliveredDataLength:20}},
  {...d,verdict:'failed',error:'arbitrary crash'},
  ];
- for(const v of variants)assert.throws(()=>verifyFault(v,'inconsistent_data_length'));
+ for(const v of variants)assert.throws(()=>verifyFault(v,'inconsistent_data_length',commit));
 });
 test('short response needs exactly twelve delivered bytes',()=>{
  const d=safe('short_s7_reply');d.mutation.deliveredBytes=12;
- assert.equal(verifyFault(d,'short_s7_reply').classification,'NO_INVALID_FRESH_OBSERVED');
- assert.throws(()=>verifyFault({...d,mutation:{...d.mutation,deliveredBytes:44}},'short_s7_reply'));
+ assert.equal(verifyFault(d,'short_s7_reply',commit).classification,'NO_INVALID_FRESH_OBSERVED');
+ assert.throws(()=>verifyFault({...d,mutation:{...d.mutation,deliveredBytes:44}},'short_s7_reply',commit));
 });
 test('healthy comparator is required and pinned',()=>{
  const p={schemaVersion:1,status:'passed',sourceCommit:commit,
