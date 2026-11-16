@@ -17,7 +17,7 @@ node --test test/comparison-matrix.test.cjs
 node scripts/build-comparison-matrix.cjs
 ```
 
-GitHub Actions archives `test-reports/comparison-matrix.v1.json` and `test-reports/comparison-matrix.v1.md`. Source CI run links are **curated historical evidence pointers**, not newly executed or signed result attestations. All candidates remain not qualified.
+GitHub Actions archives `test-reports/comparison-matrix.v1.json` and `test-reports/comparison-matrix.v1.md`. Source CI run links are **curated historical evidence pointers**, not newly executed or signed result attestations. A second `live-cross-engine-comparison.yml` workflow **actually executes** released JS and Rust in one exact-commit Actions run and writes `test-reports/live-comparison-v1.json` with per-input report SHA-256 and strict-original-exit evidence. Historical Alpha2 remains in separate, unmerged PR #13. All candidates remain not qualified.
 
 ## Run the standalone self-validation
 
