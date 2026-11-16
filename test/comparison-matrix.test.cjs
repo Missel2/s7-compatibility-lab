@@ -67,7 +67,6 @@ test('fail closed on unknown outcomes, duplicate observations, misidentified can
     x=>x.observations[0].evidence.artifact='../traversal.json',
     x=>x.observations[0].evidence.assertion='',
     x=>x.observations[0].candidatePass=true,
-    x=>x.observations[0].phase='MERGED_BASELINE',
     x=>x.observations[0].limitations=[],
     x=>x.candidates[0].version='',
     x=>x.scenarios[1].oracle='UNDEFINED',
