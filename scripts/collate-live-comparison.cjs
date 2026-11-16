@@ -131,7 +131,7 @@ function collate(inputs, head) {
 function verifyRawLinks(inputs, reportDir, head){
  const expected=new Map();
  function add(file,claimedDigest=null) {
-  assert.match(file,/^[a-zA-Z0-9_.-]+\\.json$/,'Unsafe or missing original filename');
+  assert.match(file,/^[a-zA-Z0-9_.-]+\.json$/,'Unsafe or missing original filename');
   if(expected.has(file)){
    if(claimedDigest!==null)assert.equal(expected.get(file),claimedDigest);
    return;
