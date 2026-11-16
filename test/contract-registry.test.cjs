@@ -6,7 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const registry = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'contracts', 'registry.json'), 'utf8'));
-const allowed = new Set(['HISTORICAL_ONLY', 'PR_OPEN_UNQUALIFIED', 'PENDING_IMPLEMENTATION', 'PENDING_HARDWARE']);
+const allowed = new Set(['HISTORICAL_ONLY', 'MERGED_BASELINE_UNSAFE', 'PENDING_IMPLEMENTATION', 'PENDING_HARDWARE']);
 const historical = new Set(['S7-ERR-001', 'S7-ERR-002', 'S7-ERR-003', 'S7-ERR-004', 'S7-ERR-005']);
 
 test('registry identifiers are stable, unique, and have explicit states', () => {
@@ -31,8 +31,8 @@ test('five historical regressions retain sources, versions and truthful evidence
     assert.match(c.historical_evidence, /^https:\/\/github\.com\//);
     assert.ok(c.version, c.id);
     assert.ok(['JS', 'RUST'].includes(c.engine), c.id);
-    assert.ok(['HISTORICAL_ONLY','PR_OPEN_UNQUALIFIED'].includes(c.status), c.id);
-    assert.equal(Boolean(c.lab_evidence), c.status === 'PR_OPEN_UNQUALIFIED', c.id);
+    assert.ok(['HISTORICAL_ONLY','MERGED_BASELINE_UNSAFE'].includes(c.status), c.id);
+    assert.equal(Boolean(c.lab_evidence), c.status === 'MERGED_BASELINE_UNSAFE', c.id);
   }
 });
 
