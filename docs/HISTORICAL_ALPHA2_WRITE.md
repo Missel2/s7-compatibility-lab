@@ -23,3 +23,13 @@ This lab is software-only, GitHub-hosted with 127.0.0.1 disposable fixture. It d
 ## Provenance caveat for current npm resolution
 
 The source repository's original `package-lock.json` pins `iso-on-tcp@0.1.0`, but the package manifest inherited by the packed wrapper specifies `^0.1.0`. Installing the same wrapper today without a locked consumer dependency tree resolved `iso-on-tcp@0.1.1` with registry SRI `sha512-DP/7lkUeOrTCmv6oveycd62lmfGI3I2qQo9hDRMKfpsrN27Z3FUqtd7NXMSJOw7P9+6AN8D/PRoSUQ/rzy+M4g==`. The original consumer used `npm install` without an explicitly locked consumer tree; the original runner's iso-on-tcp version cannot currently be certified from its logs. We **do not** override any host dependency or claim the full consumer tree is byte-for-byte identical. The wrapper tarball and effective `@missel2/nodes7` registry package are independently exact-hash verified. This is a version-specific reproduction with a fully recorded modern installation environment, not proof of an identical complete 2026 historical process image.
+
+## First independent current-lab reproduction
+
+[GitHub Actions #43959037772](https://github.com/Missel2/s7-compatibility-lab/actions/runs/43959037772) at exact source head `4b63122801f6d5f90931c3f4aeb8467d0f3e16af` reported five assessor unit tests passed and then:
+
+```json
+{"classification":"PARTIAL_WRITE_KNOWN_UNSAFE","candidateExit":1,"appliedBytes":1,"observedWrites":1,"readback":[15,11,13]}
+```
+
+This is an independently observed defect in the historical wrapper/transport package pairing under the disclosed modern consumer version tree; it matches the original reported failure signature. The new registry entry `S7-ERR-001` remains `PR_OPEN_UNQUALIFIED` and `candidate_qualified:false` until merged, and never means that the old release was safe.
