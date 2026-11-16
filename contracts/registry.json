@@ -2,12 +2,12 @@
   "schema_version": 1,
   "scope": "SOFTWARE_LOOPBACK_ONLY",
   "qualification_policy": "FAIL_CLOSED",
-  "notes": "Inventory of explicitly sourced historical findings and future scenario families, not a claim that every reported upstream issue is a tested defect. PR_OPEN_UNQUALIFIED marks a scenario observed in an unmerged PR, never release qualification.",
+  "notes": "Inventory of sourced historical findings and proposed risk families, not proof that every upstream report is an executable defect. MERGED_BASELINE_UNSAFE means reproducible known-unsafe characterization in merged source, never candidate qualification.",
   "statuses": {
     "HISTORICAL_ONLY": "External historical result; no executable regression proven on main.",
-    "PR_OPEN_UNQUALIFIED": "Lab evidence exists on draft PR #3; not merged and never a passing safety qualification.",
     "PENDING_IMPLEMENTATION": "Contract family only; no executable test or result.",
-    "PENDING_HARDWARE": "Requires separately authorized isolated hardware; no software result qualifies it."
+    "PENDING_HARDWARE": "Requires separately authorized isolated hardware; no software result qualifies it.",
+    "MERGED_BASELINE_UNSAFE": "Merged lab characterization confirms known unsafe behavior on released baseline; never release qualification."
   },
   "contracts": [
     {
@@ -48,7 +48,7 @@
       "engine": "RUST",
       "package": "node-red-contrib-s7-rust",
       "version": "1.4.0",
-      "status": "PR_OPEN_UNQUALIFIED",
+      "status": "MERGED_BASELINE_UNSAFE",
       "source_issue": "https://github.com/Missel2/node-red-contrib-s7/issues/56",
       "historical_evidence": "https://github.com/Missel2/node-red-contrib-s7/actions/runs/43869072608",
       "lab_evidence": "https://github.com/Missel2/s7-compatibility-lab/pull/3",
@@ -63,7 +63,7 @@
       "engine": "RUST",
       "package": "node-red-contrib-s7-rust",
       "version": "1.4.0",
-      "status": "PR_OPEN_UNQUALIFIED",
+      "status": "MERGED_BASELINE_UNSAFE",
       "source_issue": "https://github.com/Missel2/node-red-contrib-s7/issues/59",
       "historical_evidence": "https://github.com/Missel2/node-red-contrib-s7/actions/runs/43869072608",
       "lab_evidence": "https://github.com/Missel2/s7-compatibility-lab/pull/3",
@@ -78,7 +78,7 @@
       "engine": "RUST",
       "package": "node-red-contrib-s7-rust",
       "version": "1.4.0",
-      "status": "PR_OPEN_UNQUALIFIED",
+      "status": "MERGED_BASELINE_UNSAFE",
       "source_issue": "https://github.com/Missel2/node-red-contrib-s7/issues/56",
       "historical_evidence": "https://github.com/Missel2/node-red-contrib-s7/actions/runs/43869072608",
       "lab_evidence": "https://github.com/Missel2/s7-compatibility-lab/pull/3",
