@@ -7,7 +7,8 @@
     "HISTORICAL_ONLY": "External historical result; no executable regression proven on main.",
     "PENDING_IMPLEMENTATION": "Contract family only; no executable test or result.",
     "PENDING_HARDWARE": "Requires separately authorized isolated hardware; no software result qualifies it.",
-    "MERGED_BASELINE_UNSAFE": "Merged lab characterization confirms known unsafe behavior on released baseline; never release qualification."
+    "MERGED_BASELINE_UNSAFE": "Merged lab characterization confirms known unsafe behavior on released baseline; never release qualification.",
+    "PR_OPEN_UNQUALIFIED": "Observed in a PR-scoped real candidate characterization; not merged or release-qualified. A fresh exact-head run is required."
   },
   "contracts": [
     {
@@ -84,6 +85,23 @@
       "lab_evidence": "https://github.com/Missel2/s7-compatibility-lab/pull/3",
       "expected_safe_behavior": "Flow teardown stops all future COTP connection attempts.",
       "candidate_qualified": false
+    },
+    {
+      "id": "S7-ERR-006",
+      "slug": "published_js_impossible_ackdata_length_accepted",
+      "kind": "REPORTED_REGRESSION",
+      "protocol": "READ_VAR",
+      "engine": "JS",
+      "package": "@oriolrius/node-red-contrib-s7",
+      "version": "4.4.1",
+      "transport_dependency": "@oriolrius/nodes7@1.1.5",
+      "status": "PR_OPEN_UNQUALIFIED",
+      "source_issue": "https://github.com/Missel2/nodes7/issues/39",
+      "historical_evidence": null,
+      "lab_evidence": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43953604005",
+      "expected_safe_behavior": "Reject an AckData whose declared data length is larger than the actual delivered S7 frame, and never expose its payload as a fresh read.",
+      "candidate_qualified": false,
+      "notes": "This published @oriolrius baseline is a distinct version from historical @missel2 alpha issue S7-ERR-002. The cited run characterized an actual strict candidate exit 1; it does not establish equivalence with the historical package."
     },
     {
       "id": "S7-RISK-006",
