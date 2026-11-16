@@ -59,3 +59,17 @@ test('unsupported schema, invalid body and omitted result collection fail',()=>{
   assert.throws(()=>verifyQualification(registry,null,required));
   const omitted=result();delete omitted.contracts;assert.throws(()=>verifyQualification(registry,omitted,required));
 });
+
+test('arrays, wrappers and numeric digest values cannot pass evidence shape validation', () => {
+  for (const mutate of [
+    r => { r.candidate.artifact_sha256 = [hash]; },
+    r => { r.fixture.observer_sha256 = [hash]; },
+    r => { r.contracts[0].evidence.capture_sha256 = [hash]; },
+    r => { r.candidate.artifact_sha256 = {toString: () => hash}; },
+    r => { r.contracts[0].evidence.capture_sha256 = 123; }
+  ]) {
+    const r = result();
+    mutate(r);
+    assert.throws(() => verifyQualification(registry, r, required));
+  }
+});
