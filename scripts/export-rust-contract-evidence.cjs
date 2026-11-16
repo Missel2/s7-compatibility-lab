@@ -45,7 +45,7 @@ function buildIndex(baseline, reportBytes, commit, registry){
     if(!spec.contract){controls.push({...provenance,control:'malformed_length_rejected',outcome:checked.outcome});continue;}
     for(const id of [].concat(spec.contract)){
       assert.equal(known.get(id)?.kind,'REPORTED_REGRESSION');
-      assert.equal(known.get(id)?.status,'PR_OPEN_UNQUALIFIED');
+      assert.equal(known.get(id)?.status,'MERGED_BASELINE_UNSAFE');
       results.push({id,classification:'KNOWN_UNSAFE',candidatePass:false, ...provenance});
     }
   }
