@@ -31,8 +31,8 @@ test('five historical regressions retain sources, versions and truthful evidence
     assert.match(c.historical_evidence, /^https:\/\/github\.com\//);
     assert.ok(c.version, c.id);
     assert.ok(['JS', 'RUST'].includes(c.engine), c.id);
-    assert.ok(['HISTORICAL_ONLY','MERGED_BASELINE_UNSAFE'].includes(c.status), c.id);
-    assert.equal(Boolean(c.lab_evidence), c.status === 'MERGED_BASELINE_UNSAFE', c.id);
+    assert.ok(['HISTORICAL_ONLY','MERGED_BASELINE_UNSAFE','PR_OPEN_UNQUALIFIED'].includes(c.status), c.id);
+    assert.equal(Boolean(c.lab_evidence), c.status !== 'HISTORICAL_ONLY', c.id);
   }
 });
 
@@ -64,4 +64,17 @@ test('published JS malformed AckData finding is separate from original alpha his
   assert.equal(published.historical_evidence, null);
   assert.match(published.lab_evidence, /s7-compatibility-lab\/actions\/runs\/43953604005$/);
   assert.equal(published.candidate_qualified, false);
+});
+
+test('real historical alpha2 wire regression is distinct from modern published JS healthy write', () => {
+  const historic=registry.contracts.find(c=>c.id==='S7-ERR-001');
+  assert.equal(historic.version,'0.1.0-alpha.2');
+  assert.equal(historic.status,'PR_OPEN_UNQUALIFIED');
+  assert.match(historic.lab_evidence,/\/s7-compatibility-lab\/actions\/runs\/43959037772$/);
+  assert.match(historic.notes,/iso-on-tcp 0\.1\.1/);
+  assert.match(historic.notes,/\[15,11,13\]/);
+  assert.equal(historic.candidate_qualified,false);
+  const modern=registry.contracts.find(c=>c.id==='S7-ERR-006');
+  assert.equal(modern.version,'4.4.1');
+  assert.notEqual(modern.package,historic.package);
 });
