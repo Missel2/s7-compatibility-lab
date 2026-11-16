@@ -95,13 +95,13 @@
       "package": "@oriolrius/node-red-contrib-s7",
       "version": "4.4.1",
       "transport_dependency": "@oriolrius/nodes7@1.1.5",
-      "status": "PR_OPEN_UNQUALIFIED",
+      "status": "MERGED_BASELINE_UNSAFE",
       "source_issue": "https://github.com/Missel2/nodes7/issues/39",
       "historical_evidence": null,
       "lab_evidence": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43953604005",
       "expected_safe_behavior": "Reject an AckData whose declared data length is larger than the actual delivered S7 frame, and never expose its payload as a fresh read.",
       "candidate_qualified": false,
-      "notes": "This published @oriolrius baseline is a distinct version from historical @missel2 alpha issue S7-ERR-002. The cited run characterized an actual strict candidate exit 1; it does not establish equivalence with the historical package."
+      "notes": "This published @oriolrius baseline is a distinct version from historical @missel2 alpha issue S7-ERR-002. The cited run characterized an actual strict candidate exit 1; it does not establish equivalence with the historical package. Its reproducible characterization code was integrated via squash-merged lab PR #10 at commit 6385c59c3f4086daeca29709950753a8e9cba3a8; merged characterization remains NOT_QUALIFIED."
     },
     {
       "id": "S7-RISK-006",
