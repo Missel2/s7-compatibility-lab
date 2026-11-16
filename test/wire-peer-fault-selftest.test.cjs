@@ -130,3 +130,15 @@ test("truncated-S7-reply injection cannot crash the wire observer", { timeout: 5
   assert.equal(ctx.relay.mutatedReadReplies[0].deliveredPduRef, null);
   assert.deepEqual(ctx.relay.errors, []);
 });
+
+test("TCP FIN after a complete COTP request still drains the upstream response", { timeout: 5000 }, async t => {
+  const ctx = await setup(t, frame => frame);
+  let echoed = Buffer.alloc(0);
+  ctx.client.on("data", chunk => { echoed = Buffer.concat([echoed, chunk]); });
+  ctx.client.end(cotpRequest);
+  await boundUntil(() => echoed.length === cotpRequest.length, "reply after client FIN");
+  assert.deepEqual(echoed, cotpRequest);
+  await boundUntil(() => ctx.relay.active.size === 0, "FIN closes relay session");
+  assert.equal(ctx.relay.cotpRequests, 1);
+  assert.deepEqual(ctx.relay.errors, []);
+});
