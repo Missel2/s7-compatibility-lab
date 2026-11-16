@@ -7,6 +7,7 @@ const net = require("node:net");
 const { once } = require("node:events");
 const { setTimeout: sleep } = require("node:timers/promises");
 const { createWirePeer } = require("../lib/wire-peer.cjs");
+const { digest } = require("../lib/wire-transcript.cjs");
 
 const HOST = "127.0.0.1";
 const REF = 0x1234;
@@ -140,5 +141,37 @@ test("TCP FIN after a complete COTP request still drains the upstream response",
   assert.deepEqual(echoed, cotpRequest);
   await boundUntil(() => ctx.relay.active.size === 0, "FIN closes relay session");
   assert.equal(ctx.relay.cotpRequests, 1);
+  assert.deepEqual(ctx.relay.errors, []);
+});
+
+test("actual relay frame transcript distinguishes original and mutated READ_VAR ACK", { timeout: 5000 }, async t => {
+  const ctx = await setup(t, bytes => bytes[17] === 4 ? readAck : null);
+  let delivered = Buffer.alloc(0);
+  ctx.client.on("data", chunk => { delivered = Buffer.concat([delivered, chunk]); });
+  ctx.relay.readReplyMutation = "wrong_pdu_reference";
+  ctx.client.write(readRequest);
+  await boundUntil(() => delivered.length === readAck.length, "mutated reply from live observer");
+  const e = ctx.relay.getWireEvidence();
+  const upstream = e.events.filter(x => x.direction === "fixture_rx");
+  const downstream = e.events.filter(x => x.direction === "client_tx");
+  assert.equal(upstream.length, 1);
+  assert.equal(downstream.length, 1);
+  assert.equal(upstream[0].frameSha256, digest(readAck));
+  assert.equal(downstream[0].frameSha256, digest(delivered));
+  assert.notEqual(upstream[0].frameSha256, downstream[0].frameSha256);
+  assert.equal(e.eventCount, 4, "request observed, forwarded, upstream reply, mutated delivery");
+  assert.deepEqual(ctx.relay.errors, []);
+});
+
+test("dropped positive WRITE_VAR ACK has independent upstream hash but no client delivery", { timeout: 5000 }, async t => {
+  const ctx = await setup(t, bytes => bytes[17] === 5 ? writeAck : null);
+  ctx.relay.dropWriteAck = true;
+  ctx.client.write(writeRequest);
+  await boundUntil(() => ctx.relay.droppedWrites.length === 1, "observed dropped ACK");
+  const entries = ctx.relay.getWireEvidence().events;
+  assert.equal(entries.filter(x => x.direction === "fixture_rx").length, 1);
+  assert.equal(entries.filter(x => x.direction === "fixture_ack_dropped").length, 1);
+  assert.equal(entries.filter(x => x.direction === "client_tx").length, 0);
+  assert.equal(entries.find(x => x.direction === "fixture_rx").frameSha256, digest(writeAck));
   assert.deepEqual(ctx.relay.errors, []);
 });
