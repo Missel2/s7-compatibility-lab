@@ -89,8 +89,9 @@ jobs:
             throw Error('Historical @missel2/nodes7 alpha2 transport is not original published package');
           const iso=lock['node_modules/iso-on-tcp'];
           console.log('ACTUAL_ISO_ON_TCP_LOCK='+JSON.stringify(iso));
-          if(iso?.version!=='0.1.0'||iso.integrity!=='sha512-ty4/0A+4qW35QoPE74GfUiMtIBtTN4ZENNqfD0+5GQIoOnjLvmzCC1pCRWwlhopdSGZGmza9bBxdOuVmzlpN7g==')
-            throw Error('Historical iso-on-tcp integrity differs');
+          if(iso?.version!=='0.1.1'||iso.integrity!=='sha512-DP/7lkUeOrTCmv6oveycd62lmfGI3I2qQo9hDRMKfpsrN27Z3FUqtd7NXMSJOw7P9+6AN8D/PRoSUQ/rzy+M4g==')
+            throw Error('Consumer iso-on-tcp SRI differs from inspected modern npm resolution; do not rewrite host dependencies');
+          console.log('HISTORICAL_ISO_RESOLUTION_DIVERGENCE=source-lock-0.1.0/consumer-0.1.1');
           console.log('HISTORICAL_TRANSPORT_SRI='+dep.integrity);
           console.log('HISTORICAL_CONSUMER_LOCK_SHA256='+crypto.createHash('sha256').update(bytes).digest('hex'));
           NODE
