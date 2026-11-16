@@ -56,7 +56,7 @@ test('published JS malformed AckData finding is separate from original alpha his
   assert.ok(alpha && published);
   assert.equal(alpha.status, 'HISTORICAL_ONLY');
   assert.equal(alpha.version, '0.1.0-alpha.2');
-  assert.equal(published.status, 'PR_OPEN_UNQUALIFIED');
+  assert.equal(published.status, 'MERGED_BASELINE_UNSAFE');
   assert.equal(published.kind, 'REPORTED_REGRESSION');
   assert.equal(published.engine, 'JS');
   assert.equal(published.version, '4.4.1');
