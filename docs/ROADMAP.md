@@ -15,7 +15,7 @@
 ## Currently in review
 
 - [ ] [PR #13](https://github.com/Missel2/s7-compatibility-lab/pull/13): exact source-packed historical `@missel2` alpha2 with npm-SRI pinned nodes7; independently reproduced a **partial three-byte write** [15,11,13] vs [15,29,43]. All six exact-head jobs green; **not yet merged**. Different runtime `iso-on-tcp` resolution recorded.
-- [ ] Versioned evidence and implementation comparison matrix (this development branch): same scenario/fixture/oracle requirement, explicit missing data, no artificial leaderboard
+- [ ] Versioned evidence and implementation comparison matrix (this development branch): curated older-run index **and** same-head real JS/Rust Node-RED execution with original strict candidate result files and fail-closed collation; CI proof needed before merge
 
 ## P0 — the strongest next product evidence
 
