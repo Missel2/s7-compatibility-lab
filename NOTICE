@@ -1,0 +1,16 @@
+S7 Compatibility Lab
+Copyright (C) 2026 contributors to Missel2/s7-compatibility-lab.
+
+This repository includes source adapted from:
+  Missel2/node-red-contrib-s7 (independent GPL-3.0-or-later fork of
+  st-one-io/node-red-contrib-s7)
+  Reference source revision: e94bb29490f8ecfd22fdc7f6cf4e6e012e784393
+  Attribution and file mapping: docs/PROVENANCE.md
+
+Those reused files remain subject to the source license, GPL-3.0-or-later.
+The repository is distributed under GPL-3.0-or-later; the full text of
+GPL version 3 is included in LICENSE. You may elect a later GPL version.
+
+python-snap7 is NOT vendored. The test environment installs a pinned
+published dependency separately. Siemens trademarks belong to their owner.
+This software is neither endorsed by nor affiliated with Siemens AG.
