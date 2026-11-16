@@ -29,3 +29,13 @@ The Python probe **does not accept a target IP**. The synthetic server and TCP r
 ## Governance and licensing
 
 This lab is GPL-3.0-or-later because the imported harness files originate from a GPL-3.0-or-later repository. See [NOTICE](NOTICE), [LICENSE](LICENSE), [PROVENANCE](docs/PROVENANCE.md) and [AGENTS.md](AGENTS.md). Published third-party S7 packages are **not vendored**. Changes are reviewed in GitHub PRs and are not merged or released automatically. Maintainers should preserve upstream authorship and direct contributions to appropriate upstream projects.
+
+## Phase 2: Rust 1.4.0 characterization (in review)
+
+A separate GitHub workflow installs unmodified published `node-red-contrib-s7-rust@1.4.0` in Node-RED 5.0.9, then uses the same independent S7Comm relay to confirm a **correctly rejected invalid length** (positive safety control) and two **unsafe behaviors** (a bad 16-bit PDU reference accepted as fresh, and an applied write repeated after losing its ACK), plus attempts to reconnect after explicit flow removal. The purpose of a successful *baseline-characterization job* is **to prove that the target is unsafe**, not to qualify it. The machine-readable report must say `classification: NOT_QUALIFIED`, `behavioralSafety: KNOWN_UNSAFE` and `candidatePass: false`. Upstream-fix candidates will have separate genuinely failing-on-error release gates. See [issue #2](https://github.com/Missel2/s7-compatibility-lab/issues/2).
+
+Published package integrity values are checked from the npm-installed lock, but the transitive dependency lock is not yet committed; full immutable repeatability remains a next step. No S7CommPlus/HIL validation is claimed.
+
+### Phase 2: actual published JS/Rust comparison (in review)
+
+The second candidate CI workflow installs real published `@oriolrius/node-red-contrib-s7@4.4.1` and `node-red-contrib-s7-rust@1.4.0` under unmodified Node-RED `5.0.9`. Both must read the same synthetic DB1 values over the same real COTP/S7Comm fixture and demonstrate kernel-visible TCP client teardown. This **healthy-path only** result does not reverse Rust 1.4.0's independent known-unsafe lost-WRITE-ACK, wrong-PDU-ref and post-unload retries. npm integrity records are retained, but a fully committed transitive lock remains pending.

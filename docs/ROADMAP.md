@@ -7,7 +7,7 @@
 - [ ] Protected default branch and explicit human review rules
 
 ## Phase 2 — independent S7Comm adapters
-- [ ] Install real JavaScript/Node-RED and Rust/Node-RED candidates by exact published package versions and integrity pins
+- [~] Install real JavaScript/Node-RED and Rust/Node-RED candidates by exact published package versions and integrity pins: Rust 1.4.0 characterization implemented, JS adapter and a committed fully reproducible lock still pending
 - [ ] Migrate original READ_VAR malformed-reply tests, multi-item write padding, lost ACK and teardown fault scenarios from [source PR #58](https://github.com/Missel2/node-red-contrib-s7/pull/58)
 - [ ] Keep candidate actual RED failures in reports; a new candidate's safety gate fails hard
 - [ ] Include positive controls, source SHAs, wire references, readbacks, artifacts, and all original provenance

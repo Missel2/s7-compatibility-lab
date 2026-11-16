@@ -1,0 +1,11 @@
+{
+  "name": "s7-compatibility-lab",
+  "version": "0.0.0",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "description": "Independent synthetic S7 protocol compatibility and reliability testing",
+  "scripts": {
+    "test:instrument": "node --test test/fixture-loopback.test.cjs test/wire-peer-fault-selftest.test.cjs test/wire-peer-header.test.cjs",
+    "test:assessment": "node --test test/rust-baseline-assessor.test.cjs"
+  }
+}
