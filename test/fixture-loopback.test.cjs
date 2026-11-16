@@ -67,8 +67,14 @@ test("installed Python S7 client reads and writes ONLY disposable loopback DB1 t
   assert.equal(peer.writes.length, 1, "One explicit synthetic write must cause exactly one wire WRITE_VAR");
   assert.equal(peer.droppedWrites.length, 0, "Baseline must not silently inject a write ACK failure");
   assert.deepEqual(peer.errors, [], "The observer must have no socket/parser errors");
+  const transcript = peer.getWireEvidence();
+  assert.ok(transcript.eventCount >= 8, "Real TPKT frames must have byte-level hashes");
+  assert.match(transcript.chainSha256, /^[0-9a-f]{64}$/);
+  assert.ok(transcript.events.some(x => x.direction === "fixture_tx"));
+  assert.ok(transcript.events.some(x => x.direction === "fixture_rx"));
   const report = { schemaVersion: 1, status: "passed", category: "harness_positive_control",
     hardware: "NOT_TESTED", fixture: "python-snap7==3.3.1",
+    wireEvidence: transcript,
     measured: { cotpRequests: peer.cotpRequests, readRequests: peer.reads.length,
       writeRequests: peer.writes.length, probe } };
   fs.mkdirSync(path.join(root, "test-reports"), { recursive: true });
