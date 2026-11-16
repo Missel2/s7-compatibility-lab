@@ -3,7 +3,6 @@ name: S7 lab harness self-validation (loopback only)
 on:
   pull_request:
   push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
