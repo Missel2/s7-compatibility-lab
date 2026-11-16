@@ -6,7 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const registry = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'contracts', 'registry.json'), 'utf8'));
-const allowed = new Set(['HISTORICAL_ONLY', 'MERGED_BASELINE_UNSAFE', 'PENDING_IMPLEMENTATION', 'PENDING_HARDWARE']);
+const allowed = new Set(['HISTORICAL_ONLY', 'MERGED_BASELINE_UNSAFE', 'PENDING_IMPLEMENTATION', 'PENDING_HARDWARE', 'PR_OPEN_UNQUALIFIED']);
 const historical = new Set(['S7-ERR-001', 'S7-ERR-002', 'S7-ERR-003', 'S7-ERR-004', 'S7-ERR-005']);
 
 test('registry identifiers are stable, unique, and have explicit states', () => {
@@ -25,7 +25,7 @@ test('registry identifiers are stable, unique, and have explicit states', () => 
 });
 
 test('five historical regressions retain sources, versions and truthful evidence status', () => {
-  assert.deepEqual(new Set(registry.contracts.filter(c => c.kind === 'REPORTED_REGRESSION').map(c => c.id)), historical);
+  assert.deepEqual(new Set(registry.contracts.filter(c => c.kind === 'REPORTED_REGRESSION' && historical.has(c.id)).map(c => c.id)), historical);
   for (const c of registry.contracts.filter(c => historical.has(c.id))) {
     assert.match(c.source_issue, /^https:\/\/github\.com\//);
     assert.match(c.historical_evidence, /^https:\/\/github\.com\//);
@@ -48,4 +48,20 @@ test('pending families and hardware cannot masquerade as tested qualifications',
     assert.equal(gate.status, 'PENDING_HARDWARE');
     assert.equal(gate.candidate_qualified, false);
   }
+});
+
+test('published JS malformed AckData finding is separate from original alpha historical evidence', () => {
+  const alpha = registry.contracts.find(c => c.id === 'S7-ERR-002');
+  const published = registry.contracts.find(c => c.id === 'S7-ERR-006');
+  assert.ok(alpha && published);
+  assert.equal(alpha.status, 'HISTORICAL_ONLY');
+  assert.equal(alpha.version, '0.1.0-alpha.2');
+  assert.equal(published.status, 'PR_OPEN_UNQUALIFIED');
+  assert.equal(published.kind, 'REPORTED_REGRESSION');
+  assert.equal(published.engine, 'JS');
+  assert.equal(published.version, '4.4.1');
+  assert.equal(published.transport_dependency, '@oriolrius/nodes7@1.1.5');
+  assert.equal(published.historical_evidence, null);
+  assert.match(published.lab_evidence, /s7-compatibility-lab\/actions\/runs\/43953604005$/);
+  assert.equal(published.candidate_qualified, false);
 });
