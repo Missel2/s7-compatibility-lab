@@ -93,6 +93,11 @@ function main(){
   fs.mkdirSync(reportDir,{recursive:true});
   const commit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
   assert.equal(process.env.GITHUB_SHA,commit);
+  const registry=require('../contracts/registry.json');
+  const contract=registry.contracts.find(c=>c.id==='S7-ERR-006');
+  assert.equal(contract?.status,'PR_OPEN_UNQUALIFIED');
+  assert.equal(contract?.package,'@oriolrius/node-red-contrib-s7');
+  assert.equal(contract?.version,'4.4.1');
   const output={schemaVersion:1,scope:'SOFTWARE_LOOPBACK_ONLY',
     package:'@oriolrius/node-red-contrib-s7',version:'4.4.1',sourceCommit:commit,
     historicalAlphaVersion:'0.1.0-alpha.2',candidatePass:false,fullCandidateQualification:false,
@@ -103,7 +108,12 @@ function main(){
     output.positiveControl={file:'common-s7-compare.json',reportSha256:hash(fs.readFileSync(path.join(reportDir,'common-s7-compare.json'))),
       readVerified:true,closeVerified:true};
     for(const fault of faults)output.results.push(executeFault(fault,commit));
-    output.classification=output.results.some(x=>x.classification==='KNOWN_UNSAFE')?'KNOWN_UNSAFE':'NO_INVALID_FRESH_OBSERVED_IN_SCOPED_CASES';
+    const badLength=output.results.find(x=>x.fault==='inconsistent_data_length');
+    assert.equal(badLength?.classification,'KNOWN_UNSAFE','Exact published JS 4.4.1 known-unsafe length baseline must reproduce');
+    assert.equal(badLength.strictCandidateExit,1);
+    output.contracts=[{id:'S7-ERR-006',classification:'KNOWN_UNSAFE',candidatePass:false,
+      report:badLength.report,reportSha256:badLength.reportSha256,sourceCommit:commit}];
+    output.classification='KNOWN_UNSAFE';
     output.instrumentControlsValid=true;
     console.log('PUBLISHED_JS_READ_CHARACTERIZATION='+JSON.stringify({
       classification:output.classification,
