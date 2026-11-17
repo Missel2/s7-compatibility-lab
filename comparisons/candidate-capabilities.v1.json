@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 1,
+  "scope": "SOFTWARE_LOOPBACK_ONLY",
+  "policy": "DECLARED_CAPABILITY_NOT_TEST_OUTCOME",
+  "description": "Candidate process/transport declarations and explicit per-oracle coverage; all actual outcomes remain exclusively in the independently verified CI evidence catalog.",
+  "candidates": [
+    {
+      "id": "missel-js-alpha2",
+      "package": "@missel2/node-red-contrib-s7",
+      "version": "0.1.0-alpha.2",
+      "transport": "@missel2/nodes7@0.1.0-alpha.2",
+      "runtime": "Node-RED 5.0.9",
+      "platform": "ubuntu-24.04/linux-x64",
+      "protocols": [
+        "S7COMM_CLASSIC"
+      ],
+      "releaseSource": "SOURCE_PACK_SHA256_AND_PUBLISHED_NPM_SRI",
+      "execution": "SOURCE_PACKED_NODE_RED_PROCESS",
+      "sourceProof": "docs/HISTORICAL_ALPHA2_WRITE.md",
+      "protocolCapabilities": {
+        "S7COMM_CLASSIC": "SCOPED_SOFTWARE_OBSERVATION",
+        "S7COMMPLUS": "NOT_TESTED_SEPARATE_PROTOCOL"
+      },
+      "scenarios": {
+        "READ_HEALTHY_DB1": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "WRITE_THREE_DISJOINT_BYTES": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome KNOWN_UNSAFE at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
+        },
+        "READ_IMPOSSIBLE_ACK_LENGTH": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "READ_WRONG_PDU_REFERENCE": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "READ_SHORT_REPLY": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "WRITE_ACK_LOST_AFTER_APPLY": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "COTP_AFTER_EXPLICIT_UNLOAD": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "S7ANY_ADDRESS_24BIT_BOUND": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "WRITE_MULTI_PDU_SEGMENTATION": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "READ_OVERLAP_SPLIT_PDU": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "LATE_ECONNRESET": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "CONCURRENT_READ_WRITE": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "SUSTAINED_RECONNECT": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "HARDWARE_COVERAGE": {
+          "state": "PENDING_HARDWARE",
+          "reason": "No separately authorized CPU/firmware test"
+        }
+      }
+    },
+    {
+      "id": "oriolrius-js-4_4_1",
+      "package": "@oriolrius/node-red-contrib-s7",
+      "version": "4.4.1",
+      "transport": "@oriolrius/nodes7@1.1.5",
+      "runtime": "Node-RED 5.0.9",
+      "platform": "ubuntu-24.04/linux-x64",
+      "protocols": [
+        "S7COMM_CLASSIC"
+      ],
+      "releaseSource": "NPM_REGISTRY_SRI_RECORDED_IN_CI",
+      "execution": "PUBLISHED_NODE_RED_PROCESS",
+      "sourceProof": "docs/PROVENANCE.md",
+      "protocolCapabilities": {
+        "S7COMM_CLASSIC": "SCOPED_SOFTWARE_OBSERVATION",
+        "S7COMMPLUS": "NOT_TESTED_SEPARATE_PROTOCOL"
+      },
+      "scenarios": {
+        "READ_HEALTHY_DB1": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome SCOPED_PASS at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
+        },
+        "WRITE_THREE_DISJOINT_BYTES": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome SCOPED_PASS at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
+        },
+        "READ_IMPOSSIBLE_ACK_LENGTH": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome KNOWN_UNSAFE at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
+        },
+        "READ_WRONG_PDU_REFERENCE": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome NOT_OBSERVED_UNSAFE at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
+        },
+        "READ_SHORT_REPLY": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome NOT_OBSERVED_UNSAFE at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
+        },
+        "WRITE_ACK_LOST_AFTER_APPLY": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "COTP_AFTER_EXPLICIT_UNLOAD": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "S7ANY_ADDRESS_24BIT_BOUND": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "WRITE_MULTI_PDU_SEGMENTATION": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "READ_OVERLAP_SPLIT_PDU": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "LATE_ECONNRESET": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "CONCURRENT_READ_WRITE": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "SUSTAINED_RECONNECT": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "HARDWARE_COVERAGE": {
+          "state": "PENDING_HARDWARE",
+          "reason": "No separately authorized CPU/firmware test"
+        }
+      }
+    },
+    {
+      "id": "rust-1_4_0",
+      "package": "node-red-contrib-s7-rust",
+      "version": "1.4.0",
+      "transport": "RUST_NATIVE",
+      "runtime": "Node-RED 5.0.9",
+      "platform": "ubuntu-24.04/linux-x64",
+      "protocols": [
+        "S7COMM_CLASSIC"
+      ],
+      "releaseSource": "NPM_REGISTRY_SRI_RECORDED_IN_CI",
+      "execution": "PUBLISHED_NODE_RED_PROCESS",
+      "sourceProof": "docs/PROVENANCE.md",
+      "protocolCapabilities": {
+        "S7COMM_CLASSIC": "SCOPED_SOFTWARE_OBSERVATION",
+        "S7COMMPLUS": "NOT_TESTED_SEPARATE_PROTOCOL"
+      },
+      "scenarios": {
+        "READ_HEALTHY_DB1": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome SCOPED_PASS at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
+        },
+        "WRITE_THREE_DISJOINT_BYTES": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome SCOPED_PASS at linked exact-head CI; PR_OPEN, never full candidate qualification"
+        },
+        "READ_IMPOSSIBLE_ACK_LENGTH": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome SCOPED_PASS at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
+        },
+        "READ_WRONG_PDU_REFERENCE": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome KNOWN_UNSAFE at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
+        },
+        "READ_SHORT_REPLY": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "WRITE_ACK_LOST_AFTER_APPLY": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome KNOWN_UNSAFE at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
+        },
+        "COTP_AFTER_EXPLICIT_UNLOAD": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome KNOWN_UNSAFE at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
+        },
+        "S7ANY_ADDRESS_24BIT_BOUND": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "WRITE_MULTI_PDU_SEGMENTATION": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "READ_OVERLAP_SPLIT_PDU": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "LATE_ECONNRESET": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "CONCURRENT_READ_WRITE": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "SUSTAINED_RECONNECT": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "HARDWARE_COVERAGE": {
+          "state": "PENDING_HARDWARE",
+          "reason": "No separately authorized CPU/firmware test"
+        }
+      }
+    },
+    {
+      "id": "python-snap7-3_3_1",
+      "package": "python-snap7",
+      "version": "3.3.1",
+      "transport": "PURE_PYTHON_S7COMM_CLIENT",
+      "runtime": "CPython 3.12",
+      "platform": "ubuntu-24.04/linux-x64",
+      "protocols": [
+        "S7COMM_CLASSIC"
+      ],
+      "releaseSource": "PYPI_WHEEL_SHA256_REQUIRE_HASHES",
+      "execution": "SEPARATE_CPYTHON_CLIENT_PROCESS",
+      "sourceProof": "requirements/python-snap7.txt",
+      "protocolCapabilities": {
+        "S7COMM_CLASSIC": "SCOPED_SOFTWARE_OBSERVATION",
+        "S7COMMPLUS": "NOT_TESTED_SEPARATE_PROTOCOL"
+      },
+      "scenarios": {
+        "READ_HEALTHY_DB1": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome SCOPED_PASS at linked exact-head CI; PR_OPEN, never full candidate qualification"
+        },
+        "WRITE_THREE_DISJOINT_BYTES": {
+          "state": "NOT_TESTED",
+          "reason": "Python client has not exercised an equivalent one-command three-item WRITE_VAR; sequential writes would not count as the same oracle"
+        },
+        "READ_IMPOSSIBLE_ACK_LENGTH": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "READ_WRONG_PDU_REFERENCE": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "READ_SHORT_REPLY": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "WRITE_ACK_LOST_AFTER_APPLY": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "COTP_AFTER_EXPLICIT_UNLOAD": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "S7ANY_ADDRESS_24BIT_BOUND": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "WRITE_MULTI_PDU_SEGMENTATION": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "READ_OVERLAP_SPLIT_PDU": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "LATE_ECONNRESET": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "CONCURRENT_READ_WRITE": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "SUSTAINED_RECONNECT": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released candidate run for this exact oracle"
+        },
+        "HARDWARE_COVERAGE": {
+          "state": "PENDING_HARDWARE",
+          "reason": "No separately authorized CPU/firmware test"
+        }
+      }
+    }
+  ]
+}
