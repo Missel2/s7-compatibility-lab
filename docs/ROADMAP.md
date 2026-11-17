@@ -14,8 +14,8 @@
 
 ## Currently in review
 
-- [ ] [PR #13](https://github.com/Missel2/s7-compatibility-lab/pull/13): exact source-packed historical `@missel2` alpha2 with npm-SRI pinned nodes7; independently reproduced a **partial three-byte write** [15,11,13] vs [15,29,43]. All six exact-head jobs green; **not yet merged**. Different runtime `iso-on-tcp` resolution recorded.
-- [ ] Versioned evidence and implementation comparison matrix (this development branch): curated older-run index **and** same-head real JS/Rust Node-RED execution with original strict candidate result files and fail-closed collation; CI proof needed before merge
+- [x] [PR #13](https://github.com/Missel2/s7-compatibility-lab/pull/13): exact source-packed historical `@missel2` alpha2 with npm-SRI pinned nodes7; independently reproduced a **partial three-byte write** [15,11,13] vs [15,29,43]. All six exact-head jobs green; **merged via bcf7a51de6a3b7bcd236531c5ddff29a93ae4c02**. Different runtime `iso-on-tcp` resolution recorded.
+- [x] Versioned evidence and implementation comparison matrix (this development branch): curated older-run index **and** same-head real JS/Rust Node-RED execution with original strict candidate result files and fail-closed collation; CI proof needed before merge
 
 ## P0 — the strongest next product evidence
 
@@ -35,8 +35,3 @@
 ## HIL and releases
 
 Seven HIL gates remain **PENDING_HARDWARE**. Do not connect CI to physical controllers, install on production, publish npm, or infer industrial safety from simulator-only checks. Hardware testing requires a distinct explicit authorization and isolated plan. Merge only after exact-head checks, review and human approval under [AGENTS.md](../AGENTS.md).
-
-
-### Stacked current change (not merged)
-
-- [ ] [PR #16](https://github.com/Missel2/s7-compatibility-lab/pull/16) on PR #14: 3-BYTE write scenario is now exercised by **both** published JS and Rust via the same source oracle; an independent Python S7Comm client separately verifies DB1 target and adjacent spacer bytes. [Real CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856) observed both `[15,29,43]` values with one write frame per candidate, eleven live result cells, no candidate qualification. PR #13 remains separate and unmerged.

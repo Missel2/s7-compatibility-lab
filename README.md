@@ -4,7 +4,7 @@ Independent open-source verification laboratory for classic S7Comm and, later, S
 
 ## Status (2026-11-16)
 
-The independent software-only laboratory has already executed real S7Comm loopback comparisons against exact published JavaScript and Rust packages. The synthetic instrument, historical Rust known-unsafe characterization, released JavaScript AckData-length unsafe characterization, and 3-BYTE positive write are in merged CI. The historical `@missel2` alpha2 partial-write reproduction is in [PR #13](https://github.com/Missel2/s7-compatibility-lab/pull/13) and **is not merged yet**. A green baseline-characterization workflow can prove an unsafe candidate behavior; it is **never** a candidate release PASS.
+The independent software-only laboratory has already executed real S7Comm loopback comparisons against exact published JavaScript and Rust packages. The synthetic instrument, historical Rust known-unsafe characterization, released JavaScript AckData-length unsafe characterization, and 3-BYTE positive write are in merged CI. The historical `@missel2` alpha2 partial-write reproduction is **merged** via [PR #13](https://github.com/Missel2/s7-compatibility-lab/pull/13); it remains a confirmed unsafe historical candidate, never a release qualification. A green baseline-characterization workflow can prove an unsafe candidate behavior; it is **never** a candidate release PASS.
 
 The new [comparison architecture](docs/COMPARISON_ARCHITECTURE.md) builds a machine-readable `comparisons/catalog.v1.json` index of **specific versioned CI observations**. It lists untested and future candidates separately. It does not run the candidates anew, infer missing results, produce a global leaderboard, or substitute for production/HIL qualification.
 
@@ -17,7 +17,7 @@ node --test test/comparison-matrix.test.cjs
 node scripts/build-comparison-matrix.cjs
 ```
 
-GitHub Actions archives `test-reports/comparison-matrix.v1.json` and `test-reports/comparison-matrix.v1.md`. Source CI run links are **curated historical evidence pointers**, not newly executed or signed result attestations. A second `live-cross-engine-comparison.yml` workflow **actually executes** released JS and Rust in one exact-commit Actions run and writes `test-reports/live-comparison-v1.json` with per-input report SHA-256 and strict-original-exit evidence. Historical Alpha2 remains in separate, unmerged PR #13. All candidates remain not qualified.
+GitHub Actions archives `test-reports/comparison-matrix.v1.json` and `test-reports/comparison-matrix.v1.md`. Source CI run links are **curated historical evidence pointers**, not newly executed or signed result attestations. A second `live-cross-engine-comparison.yml` workflow **actually executes** released JS and Rust in one exact-commit Actions run and writes `test-reports/live-comparison-v1.json` with per-input report SHA-256 and strict-original-exit evidence. Historical Alpha2 has a separately merged reproduction via PR #13. All candidates remain not qualified.
 
 ## Run the standalone self-validation
 
@@ -50,8 +50,3 @@ Published package integrity values are checked from the npm-installed lock, but 
 ### Phase 2: actual published JS/Rust comparison (in review)
 
 The second candidate CI workflow installs real published `@oriolrius/node-red-contrib-s7@4.4.1` and `node-red-contrib-s7-rust@1.4.0` under unmodified Node-RED `5.0.9`. Both must read the same synthetic DB1 values over the same real COTP/S7Comm fixture and demonstrate kernel-visible TCP client teardown. This **healthy-path only** result does not reverse Rust 1.4.0's independent known-unsafe lost-WRITE-ACK, wrong-PDU-ref and post-unload retries. npm integrity records are retained, but a fully committed transitive lock remains pending.
-
-
-### Current stacked work: actual Rust three-BYTE parity
-
-[PR #16](https://github.com/Missel2/s7-compatibility-lab/pull/16) extends the same-run PR #14 comparison with an **identical native Rust and JavaScript three-BYTE write oracle** and a separate Python S7Comm client that verifies actual DB1 contents (including untouched bytes). [First independent re-read CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856): each published candidate wrote `[15,29,43]` using one observed `WRITE_VAR`, then passed the separate-client DB1 witness. This is still a **stacked, unmerged PR** and only a scoped software loopback result.

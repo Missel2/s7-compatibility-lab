@@ -1,0 +1,110 @@
+name: Historical @missel2 JS alpha2 three-BYTE partial-write reproduction (NOT qualification)
+on: [pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  exact-historical-alpha2:
+    name: Exact source archive + published transport, real loopback DB1 byte oracle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Checkout exact historical wrapper source at original CI revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: Missel2/node-red-contrib-s7
+          ref: e94bb29490f8ecfd22fdc7f6cf4e6e012e784393
+          path: historical-source
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.4'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Install hashed Python S7Comm loopback-only server
+        run: >-
+          python -m pip install --disable-pip-version-check --only-binary=:all: --require-hashes -r requirements/python-snap7.txt
+      - name: Validate independent source-only assessor and adversarial controls
+        run: |
+          node --check test/candidates/historical-alpha2-three-byte-write.cjs
+          node --check scripts/assess-historical-alpha2-write.cjs
+          node --test test/historical-alpha2-write-assessor.test.cjs
+      - name: Pack exact historical wrapper without scripts and verify original CI tarball SHA256
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C historical-source rev-parse HEAD)" = "e94bb29490f8ecfd22fdc7f6cf4e6e012e784393"
+          node - <<'NODE'
+          const p=require('./historical-source/package.json');
+          if(p.name!=='@missel2/node-red-contrib-s7'||p.version!=='0.1.0-alpha.2'||
+            p.dependencies?.['@st-one-io/nodes7']!=='npm:@missel2/nodes7@0.1.0-alpha.2')
+            throw Error('Unexpected historical source manifest');
+          NODE
+          mkdir -p .historical-pack
+          npm pack --ignore-scripts --json --pack-destination "$GITHUB_WORKSPACE/.historical-pack"             ./historical-source > .historical-pack/pack-result.json
+          node - <<'NODE'
+          const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+          const p=JSON.parse(fs.readFileSync('.historical-pack/pack-result.json'));
+          if(p.length!==1||p[0].name!=='@missel2/node-red-contrib-s7'||
+            p[0].version!=='0.1.0-alpha.2')throw Error('Unexpected source package');
+          const file=path.join('.historical-pack',p[0].filename);
+          const bytes=fs.readFileSync(file);
+          const sha=crypto.createHash('sha256').update(bytes).digest('hex');
+          if(sha!=='316d6769431fffb805b07c825a5f474e875174843f4e8e6b6da9bffca02f2c24')
+            throw Error('Historical wrapper tarball SHA256 differs from original failing CI');
+          if('sha512-'+crypto.createHash('sha512').update(bytes).digest('base64')!==p[0].integrity)
+            throw Error('Source tarball metadata SRI mismatch');
+          console.log('HISTORICAL_WRAPPER_SHA256='+sha);
+          fs.writeFileSync('.historical-pack/verified-filename.txt',file+'\n');
+          NODE
+      - name: Install unmodified historical exact wrapper, published nodes7 alpha2 and Node-RED host
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .candidate-consumer
+          printf '%s\n' '{"name":"disposable-historical-s7-comparison","version":"0.0.0","private":true}' > .candidate-consumer/package.json
+          WRAPPER="$(cat .historical-pack/verified-filename.txt)"
+          npm install --prefix .candidate-consumer --ignore-scripts --no-audit --no-fund --save-exact             node-red@5.0.9 node-red-node-test-helper@0.3.6 node-red-contrib-s7-rust@1.4.0             "$GITHUB_WORKSPACE/$WRAPPER"
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const bytes=fs.readFileSync('.candidate-consumer/package-lock.json');
+          const lock=JSON.parse(bytes).packages;
+          for(const [n,v] of Object.entries({
+            'node-red':'5.0.9','node-red-node-test-helper':'0.3.6',
+            'node-red-contrib-s7-rust':'1.4.0'})){
+             const p=lock['node_modules/'+n];
+             if(p?.version!==v||!p.integrity||!p.resolved?.startsWith('https://registry.npmjs.org/'))
+               throw Error('Published dependency does not have pinned SRI '+n);
+          }
+          const wrapper=require('./.candidate-consumer/node_modules/@missel2/node-red-contrib-s7/package.json');
+          if(wrapper.name!=='@missel2/node-red-contrib-s7'||wrapper.version!=='0.1.0-alpha.2')
+            throw Error('Wrong historical wrapper installed');
+          const dep=lock['node_modules/@st-one-io/nodes7'];
+          if(dep?.name!=='@missel2/nodes7'||dep.version!=='0.1.0-alpha.2'||
+             dep.resolved!=='https://registry.npmjs.org/@missel2/nodes7/-/nodes7-0.1.0-alpha.2.tgz'||
+             dep.integrity!=='sha512-4Lmejz+WT5YOLHBXfdSForyHltgct5A9J1indi0Q/sxZKpGIY2omRrjSMRU6fKeW6YDAb+jwAjjEz7hQE/Z9pQ==')
+            throw Error('Historical @missel2/nodes7 alpha2 transport is not original published package');
+          const iso=lock['node_modules/iso-on-tcp'];
+          console.log('ACTUAL_ISO_ON_TCP_LOCK='+JSON.stringify(iso));
+          if(iso?.version!=='0.1.1'||iso.integrity!=='sha512-DP/7lkUeOrTCmv6oveycd62lmfGI3I2qQo9hDRMKfpsrN27Z3FUqtd7NXMSJOw7P9+6AN8D/PRoSUQ/rzy+M4g==')
+            throw Error('Consumer iso-on-tcp SRI differs from inspected modern npm resolution; do not rewrite host dependencies');
+          console.log('HISTORICAL_ISO_RESOLUTION_DIVERGENCE=source-lock-0.1.0/consumer-0.1.1');
+          console.log('HISTORICAL_TRANSPORT_SRI='+dep.integrity);
+          console.log('HISTORICAL_CONSUMER_LOCK_SHA256='+crypto.createHash('sha256').update(bytes).digest('hex'));
+          NODE
+      - name: Real historical alpha2 original candidate process and independent byte readback
+        run: node scripts/assess-historical-alpha2-write.cjs
+        timeout-minutes: 6
+      - name: Retain full original failed candidate and separate independent assessment
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: historical-alpha2-S7-ERR-001-NOT-QUALIFIED
+          path: |
+            test-reports/historical-alpha2-three-byte-write.json
+            test-reports/historical-alpha2-three-byte-assessment.json
+          if-no-files-found: warn
+          retention-days: 14

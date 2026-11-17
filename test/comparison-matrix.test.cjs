@@ -26,13 +26,13 @@ test('historical unsafe JS and newer published JS positive must not cancel each 
   const w=buildMatrix(baseline).rows.find(x=>x.id==='WRITE_THREE_DISJOINT_BYTES');
   assert.equal(w.comparable,true);
   assert.equal(w.cells.find(c=>c.candidate==='missel-js-alpha2').outcome,'KNOWN_UNSAFE');
-  assert.equal(w.cells.find(c=>c.candidate==='missel-js-alpha2').phase,'PR_OPEN');
+  assert.equal(w.cells.find(c=>c.candidate==='missel-js-alpha2').phase,'MERGED_BASELINE');
   assert.equal(w.cells.find(c=>c.candidate==='oriolrius-js-4_4_1').outcome,'SCOPED_PASS');
   assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').outcome,'SCOPED_PASS');
   assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').phase,'PR_OPEN');
   assert.equal(w.observedCandidates,3);
   assert.equal(w.allVersionsObserved,true);
-  assert.equal(w.fullCoverage,false,'An observed but unmerged PR cannot be complete merged coverage');
+  assert.equal(w.fullCoverage,false,'Open PR #16 is not merged full coverage');
 });
 test('wrong PDU and impossible length show opposing version-specific behavior',()=>{
   const rows=buildMatrix(baseline).rows;
@@ -70,7 +70,7 @@ test('fail closed on unknown outcomes, duplicate observations, misidentified can
     x=>x.observations[0].evidence.artifact='../traversal.json',
     x=>x.observations[0].evidence.assertion='',
     x=>x.observations[0].candidatePass=true,
-    x=>x.observations[0].limitations=[],
+    x=>{x.observations[0].phase='PR_OPEN';x.observations[0].limitations=[]},
     x=>x.candidates[0].version='',
     x=>x.scenarios[1].oracle='UNDEFINED',
     x=>x.candidates[0].platform='windows-unknown',
