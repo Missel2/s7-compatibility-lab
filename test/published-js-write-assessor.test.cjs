@@ -6,7 +6,8 @@ const {verifyWrite}=require('../scripts/assess-published-js-write.cjs');
 const commit='e'.repeat(40);
 function specimen(readback=[15,29,43],writes=1,verdict='passed'){
  const completed=readback.every((v,i)=>v===[15,29,43][i]);
- return {schemaVersion:1,sourceCommit:commit,jsVersion:'4.4.1',nodeRed:'5.0.9',
+ return {schemaVersion:1,selectedEngine:'js',oracleId:'byte-write-1801-1803-1805-15-29-43-v1',
+  sourceCommit:commit,jsVersion:'4.4.1',nodeRed:'5.0.9',
   rustVersion:'1.4.0',hardware:'PENDING_HARDWARE',candidatePass:false,
   classification:'UNASSESSED_NOT_QUALIFIED',relayErrors:[],results:{js:{multi_write_padding:{
    case:'multi_write_padding',node:'js',positiveSingleByteWrite:true,positiveSingleWriteRequests:1,
@@ -41,6 +42,8 @@ test('no positive control, missing bytes, missing real wire, crash or wrong repo
   r=>r.results.js.multi_write_padding.error='HARNESS_TIMEOUT',
   r=>r.relayErrors.push('socket error'),
   r=>r.sourceCommit='0'.repeat(40),
+  r=>r.selectedEngine='rust',
+  r=>r.oracleId='wrong-other-scenario',
   r=>r.candidatePass=true,
   r=>r.results.js.multi_write_padding.multiWriteRequests=0,
   r=>r.results.js.multi_write_padding.verdict='passed'
