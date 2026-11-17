@@ -6,7 +6,7 @@ jobs:
   same-run-cross-engine:
     name: Exact-head JS/Rust real strict faults and common independent evidence
     runs-on: ubuntu-24.04
-    timeout-minutes: 22
+    timeout-minutes: 24
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -23,7 +23,9 @@ jobs:
       - name: Run source-only direct-collator adversarial controls
         run: |
           node --check scripts/collate-live-comparison.cjs
-          node --test test/live-comparison-collator.test.cjs
+          node --check scripts/assess-published-rust-write.cjs
+          node --check test/candidates/published-js-three-byte-write.cjs
+          node --test test/live-comparison-collator.test.cjs test/published-js-write-assessor.test.cjs test/published-rust-write-assessor.test.cjs
       - name: Install exact published independent JS and real Rust NAPI under Node-RED
         shell: bash
         run: |
@@ -54,6 +56,9 @@ jobs:
         timeout-minutes: 4
       - name: Execute strict published JavaScript 3-BYTE write oracle
         run: node scripts/assess-published-js-write.cjs
+        timeout-minutes: 3
+      - name: Execute identical 3-BYTE oracle through real native Rust 1.4.0
+        run: node scripts/assess-published-rust-write.cjs
         timeout-minutes: 3
       - name: Execute strict published JavaScript parser fault cases
         run: node scripts/assess-published-js-read.cjs
