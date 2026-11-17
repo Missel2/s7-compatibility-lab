@@ -65,7 +65,7 @@ test("standalone peer implements COTP CC, S7 setup, exact 3-item synthetic DB1 R
  const x=await session();
  assert.equal(x.frames[0][5],0xd0,"genuine COTP confirmation");
  assert.equal(x.frames[1][8],3,"genuine S7 ACKDATA for setup");
- assert.equal(x.frames[1][17],0xf0);
+ assert.equal(x.frames[1][19],0xf0,"S7 ACKDATA has a 12-byte header, then setup parameter");
  const r=x.frames[2];
  assert.equal(r[8],3);assert.equal(r[19],4);assert.equal(r[20],3);
  const data=r.subarray(21);
