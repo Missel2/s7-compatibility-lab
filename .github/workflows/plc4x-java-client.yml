@@ -1,0 +1,58 @@
+name: Real Apache PLC4X 1.0.0 Java S7Comm READ_VAR against loopback (NOT qualification)
+on: [pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  real-plc4x-client:
+    name: Real released PLC4X Java driver, strict independent wire and teardown evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # pinned v4 line
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.4'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Install local-only synthetic S7 server (pinned wheel hash)
+        run: >-
+          python -m pip install --disable-pip-version-check --only-binary=:all: --require-hashes -r requirements/python-snap7.txt
+      - name: Assert Java source-only negative controls before any candidate run
+        run: |
+          node --check scripts/assess-plc4x-java-client.cjs
+          node --test test/plc4x-client.test.cjs
+      - name: Compile exact published PLC4X 1.0.0 Java client and resolve its runtime dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -version
+          javac -version
+          mvn -version
+          cd java/plc4x-readonly-client
+          mvn --batch-mode --no-transfer-progress -DskipTests package dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+          test -s target/classpath.txt
+          test -s target/classes/org/rischlab/s7lab/Plc4xReadonlyS7Candidate.class
+          test -s "$HOME/.m2/repository/org/apache/plc4x/plc4j-driver-s7/1.0.0/plc4j-driver-s7-1.0.0.jar"
+          sha256sum "$HOME/.m2/repository/org/apache/plc4x/plc4j-driver-s7/1.0.0/plc4j-driver-s7-1.0.0.jar" | tee target/published-driver-sha256.txt
+          cat target/classpath.txt | tr ':' '\n' | grep '/org/apache/plc4x/plc4j-driver-s7/1.0.0/'
+      - name: Execute genuine JVM client via independent TCP/COTP/S7Comm observer
+        run: node scripts/assess-plc4x-java-client.cjs
+        timeout-minutes: 3
+      - name: Preserve strict raw Java process and instrument evidence, including red failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: published-apache-plc4x-java-1.0.0-original-NOT-QUALIFIED
+          path: |
+            test-reports/plc4x-java-original.json
+            test-reports/plc4x-java-assessment.json
+            java/plc4x-readonly-client/target/published-driver-sha256.txt
+          if-no-files-found: warn
+          retention-days: 14
