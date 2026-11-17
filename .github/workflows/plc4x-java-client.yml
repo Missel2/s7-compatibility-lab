@@ -27,7 +27,8 @@ jobs:
       - name: Assert Java source-only negative controls before any candidate run
         run: |
           node --check scripts/assess-plc4x-java-client.cjs
-          node --test test/plc4x-client.test.cjs
+          node --check scripts/characterize-plc4x-java-disconnect.cjs
+          node --test test/plc4x-client.test.cjs test/plc4x-teardown-characterization.test.cjs
       - name: Compile exact published PLC4X 1.0.0 Java client and resolve its runtime dependencies
         shell: bash
         run: |
@@ -45,9 +46,22 @@ jobs:
           sha256sum plc4j-driver-s7-1.0.0.jar | tee "$GITHUB_WORKSPACE/java/plc4x-readonly-client/target/published-driver-sha256.txt"
           cd "$GITHUB_WORKSPACE/java/plc4x-readonly-client"
           cat target/classpath.txt | tr ':' '\n' | grep '/org/apache/plc4x/plc4j-driver-s7/1.0.0/'
-      - name: Execute genuine JVM client via independent TCP/COTP/S7Comm observer
-        run: node scripts/assess-plc4x-java-client.cjs
-        timeout-minutes: 3
+      - name: Execute genuine Java original strict oracle — require its real unsafe red exit
+        shell: bash
+        run: |
+          set +e
+          node scripts/assess-plc4x-java-client.cjs
+          candidate_rc=$?
+          set -e
+          if [ "$candidate_rc" -ne 1 ]; then
+            echo "Expected strict original error exit exactly 1; actual: $candidate_rc"
+            exit 1
+          fi
+          test -s test-reports/plc4x-java-original.json
+          test -s test-reports/plc4x-java-assessment.json
+      - name: Qualify only exact known-unsafe 21-zero-byte post-COTP-disconnect fingerprint
+        run: node scripts/characterize-plc4x-java-disconnect.cjs
+        timeout-minutes: 1
       - name: Preserve strict raw Java process and instrument evidence, including red failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -56,6 +70,7 @@ jobs:
           path: |
             test-reports/plc4x-java-original.json
             test-reports/plc4x-java-assessment.json
+            test-reports/plc4x-java-unsafe-characterization.json
             java/plc4x-readonly-client/target/published-driver-sha256.txt
           if-no-files-found: warn
           retention-days: 14
