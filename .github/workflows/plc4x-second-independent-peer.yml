@@ -22,7 +22,7 @@ jobs:
         run: |
           node --check fixtures/independent-cotp-s7-server.cjs
           node --check scripts/assess-plc4x-independent-node-peer.cjs
-          node --test test/independent-cotp-s7-server.test.cjs test/wire-peer-malformed-fragments.test.cjs
+          node --test test/independent-cotp-s7-server.test.cjs test/wire-peer-malformed-fragments.test.cjs test/plc4x-independent-node-verifier.test.cjs
       - name: Build original PLC4X Maven client with exact released driver and reviewed artifact
         shell: bash
         run: |
