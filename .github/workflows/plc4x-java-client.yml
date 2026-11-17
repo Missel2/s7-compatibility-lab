@@ -40,7 +40,10 @@ jobs:
           test -s target/classpath.txt
           test -s target/classes/org/rischlab/s7lab/Plc4xReadonlyS7Candidate.class
           test -s "$HOME/.m2/repository/org/apache/plc4x/plc4j-driver-s7/1.0.0/plc4j-driver-s7-1.0.0.jar"
-          sha256sum "$HOME/.m2/repository/org/apache/plc4x/plc4j-driver-s7/1.0.0/plc4j-driver-s7-1.0.0.jar" | tee target/published-driver-sha256.txt
+          cd "$HOME/.m2/repository/org/apache/plc4x/plc4j-driver-s7/1.0.0"
+          sha256sum -c "$GITHUB_WORKSPACE/java/plc4x-readonly-client/plc4j-driver-s7-1.0.0.sha256"
+          sha256sum plc4j-driver-s7-1.0.0.jar | tee "$GITHUB_WORKSPACE/java/plc4x-readonly-client/target/published-driver-sha256.txt"
+          cd "$GITHUB_WORKSPACE/java/plc4x-readonly-client"
           cat target/classpath.txt | tr ':' '\n' | grep '/org/apache/plc4x/plc4j-driver-s7/1.0.0/'
       - name: Execute genuine JVM client via independent TCP/COTP/S7Comm observer
         run: node scripts/assess-plc4x-java-client.cjs
