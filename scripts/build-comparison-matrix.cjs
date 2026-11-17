@@ -142,7 +142,7 @@ function renderMarkdown(c,m) {
  '- **No global score or winner** is computed; a smaller number of unsafe findings could merely mean less testing.',
  '', '## Evidence source and coverage', '',
  'Observed scenario cells: '+m.observationCount+' of '+(m.candidateCount*m.scenarioCount)+
- '. Comparable scenarios: '+m.comparableScenarios.length+'. Full three-candidate comparison scenarios: '+m.completeComparisonScenarios.length+'.',
+ '. Comparable scenarios: '+m.comparableScenarios.length+'. Full all-candidate comparison scenarios: '+m.completeComparisonScenarios.length+'.',
  '', '## Candidate caveats', '');
  for(const x of c.candidates) head.push('- '+x.label+': '+x.package+'@'+x.version+
    ', '+x.transport+', '+x.platform+' (not qualified).');
