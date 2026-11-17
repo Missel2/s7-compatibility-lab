@@ -21,3 +21,9 @@ Run *unmodified released binaries* and a source-pinned candidate under a genuine
 
 ## Non-goals
 Hardware qualification, generic PLC tooling, source code of third-party S7 drivers, production certificates, industrial logs, network access to physical controllers and release/publish automation. Performance metrics require their own repeatable measurements and cannot be inferred from smoke tests.
+
+## Stage 3 — external client adapter under review
+
+A separate **real CPython 3.12 process** executes published `python-snap7==3.3.1` (wheel SHA-256 pinned), with only `--port` accepted. The localhost relay captures original complete TCP/COTP/S7Comm frames. Node checks exact DB1[0..11], zero writes, read request and graceful TCP session closure, plus original JSON SHA-256 and checked-out CI head.
+
+The same GitHub Actions commit then runs JavaScript and native Rust processes in Node-RED against equivalent synthetic fixture semantics. A strict collator binds all original report bytes, outputs scoped case results and preserves intentionally red original candidate-safety assertions. `comparisons/candidate-capabilities.v1.json` distinguishes observed from NOT_TESTED/HIL. The Python client and synthetic server share their python-snap7 implementation in *separate* processes, so the end-to-end stack is not independently implemented at both ends.

@@ -1,6 +1,6 @@
 # S7 Compatibility Lab — outcome-driven roadmap
 
-**Updated 2026-11-16.** Tests executed are not equivalent to driver qualification. Track code merged, PR-open observations, published candidate defects, and hardware unknowns separately. See [comparison architecture](COMPARISON_ARCHITECTURE.md).
+**Updated 2026-11-17.** Tests executed are not equivalent to driver qualification. Track code merged, PR-open observations, published candidate defects, and hardware unknowns separately. See [comparison architecture](COMPARISON_ARCHITECTURE.md).
 
 ## Implemented and evidenced on main
 
@@ -12,7 +12,7 @@
 - [x] SHA-256 of actual full observed TPKT frames (including mutation/dropped-ACK events), with bounded event history
 - [x] Fail-closed contract registry and separate qualification guard; none of the above is a full release certificate
 
-## Currently in review
+## Merged baseline source (not qualified)
 
 - [x] [PR #13](https://github.com/Missel2/s7-compatibility-lab/pull/13): exact source-packed historical `@missel2` alpha2 with npm-SRI pinned nodes7; independently reproduced a **partial three-byte write** [15,11,13] vs [15,29,43]. All six exact-head jobs green; **merged via bcf7a51de6a3b7bcd236531c5ddff29a93ae4c02**. Different runtime `iso-on-tcp` resolution recorded.
 - [x] Versioned evidence and implementation comparison matrix (this development branch): curated older-run index **and** same-head real JS/Rust Node-RED execution with original strict candidate result files and fail-closed collation; CI proof needed before merge
@@ -36,6 +36,11 @@
 
 Seven HIL gates remain **PENDING_HARDWARE**. Do not connect CI to physical controllers, install on production, publish npm, or infer industrial safety from simulator-only checks. Hardware testing requires a distinct explicit authorization and isolated plan. Merge only after exact-head checks, review and human approval under [AGENTS.md](../AGENTS.md).
 
-### Stacked current change (not merged)
+### Review-stage external candidate
 
-- [ ] [PR #16](https://github.com/Missel2/s7-compatibility-lab/pull/16) on PR #14: 3-BYTE write scenario is now exercised by **both** published JS and Rust via the same source oracle; an independent Python S7Comm client separately verifies DB1 target and adjacent spacer bytes. [Real CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856) observed both `[15,29,43]` values with one write frame per candidate, eleven live result cells, no candidate qualification. PR #13 is separately merged and its historical unsafe Alpha2 finding remains unqualified.
+- [x] [PR #16](https://github.com/Missel2/s7-compatibility-lab/pull/16) was merged: 3-BYTE write scenario is now exercised by **both** published JS and Rust via the same source oracle; an independent Python S7Comm client separately verifies DB1 target and adjacent spacer bytes. [Real CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856) observed both `[15,29,43]` values with one write frame per candidate, eleven live result cells at the cited earlier run, no candidate qualification. PR #13 is separately merged and its historical unsafe Alpha2 finding remains unqualified.
+
+- [ ] [PR #19](https://github.com/Missel2/s7-compatibility-lab/pull/19) (unmerged): first real external Python client, independent process, 12 exact DB1 bytes, real COTP/READ_VAR and clean close; 5/5 adversarial tests. [Original real CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44037883892).
+- [ ] Four-candidate versioned capability declarations (56 scenario cells) + source-bound same-head client evidence. [Shared CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44038695742) executes Python along with the JS/Rust clients.
+- [ ] Next independent client ecosystem: Apache PLC4X Java on an exact released, verified JDK/Maven artifact, same READ_HEALTHY_DB1 independent wire oracle.
+- [ ] Add independent S7ANY address bounds and multi-PDU read/write scenarios; do not mislabel Python sequential API operations as one multi-item WRITE_VAR.
