@@ -48,6 +48,8 @@ function verifyKnownPlc4xAnomaly(r,originalBytes,head) {
  assert.equal(a.byteCount,21);
  assert.equal(a.allZero,true);
  assert.equal(a.afterCotpDisconnect,true);
+ assert.equal(a.truncated,false,"Never accept a truncated TCP fingerprint");
+ assert.ok(["TCP_FIN","TCP_CLOSE"].includes(a.termination),"Capture must terminate on actual transport close");
  assert.equal(a.prefixHex,"00".repeat(21));
  assert.equal(a.sha256,digest(anomalyRaw));
  const w=r.wireEvidence;
