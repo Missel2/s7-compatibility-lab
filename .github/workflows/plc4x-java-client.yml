@@ -28,7 +28,7 @@ jobs:
         run: |
           node --check scripts/assess-plc4x-java-client.cjs
           node --check scripts/characterize-plc4x-java-disconnect.cjs
-          node --test test/plc4x-client.test.cjs test/plc4x-teardown-characterization.test.cjs
+          node --test test/plc4x-client.test.cjs test/plc4x-teardown-characterization.test.cjs test/wire-peer-malformed-fragments.test.cjs
       - name: Compile exact published PLC4X 1.0.0 Java client and resolve its runtime dependencies
         shell: bash
         run: |
