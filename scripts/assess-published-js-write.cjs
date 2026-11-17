@@ -43,6 +43,18 @@ function verifyWrite(report,commit,engine='js'){
  assert.ok(check.wireEvidence?.eventCount>0,'Require real original frame measurements');
  assert.ok(check.wireEvidence?.events?.some(e=>e.direction==='client_rx' && /^[a-f0-9]{64}$/.test(e.frameSha256)));
  assert.match(check.wireEvidence.chainSha256,/^[a-f0-9]{64}$/);
+ assert.equal(check.externalReadbackError,undefined,'Independent S7Comm witness failed');
+ assert.equal(check.externalWitness,'python-snap7==3.3.1 external S7Comm client');
+ assert.deepEqual(check.externalUntouched,[10,12],'Adjacent DB1 bytes must remain unmodified');
+ assert.deepEqual(check.externalReadback,check.actualReadback,
+  'The independent separate-client DB1 readback contradicts the candidate');
+ assert.match(check.externalSpanSha256,/^[a-f0-9]{64}$/);
+ assert.match(check.externalSpanHex,/^[a-f0-9]{10}$/);
+ const witnessed=Buffer.from(check.externalSpanHex,'hex');
+ assert.deepEqual([witnessed[0],witnessed[2],witnessed[4]],check.actualReadback);
+ assert.deepEqual([witnessed[1],witnessed[3]],[10,12]);
+ assert.equal(crypto.createHash('sha256').update(witnessed).digest('hex'),
+  check.externalSpanSha256,'Independent DB1 span hash mismatch');
  const applied=check.actualReadback.map((x,i)=>x===intended[i]);
  const count=applied.filter(Boolean).length;
  const all=count===3;
@@ -51,7 +63,7 @@ function verifyWrite(report,commit,engine='js'){
   assert.equal(check.readbackComplete,true);
   assert.ok(check.multiWriteRequests>=1,'No real wire write');
   assert.equal(check.error,undefined);
-  return {classification:'COMPLETE_WRITE_OBSERVED',candidateExit:0,appliedBytes:3,
+  return {classification:'COMPLETE_WRITE_OBSERVED',candidateExit:0,appliedBytes:3,externalVerified:true,
     observedWrites:check.multiWriteRequests,readback:check.actualReadback};
  }
  assert.equal(check.verdict,'failed');
@@ -61,7 +73,7 @@ function verifyWrite(report,commit,engine='js'){
  // legitimate complete rejection or an unsupported API. Never conflate.
  const classification=count>0?'PARTIAL_WRITE_KNOWN_UNSAFE':'NO_WRITE_APPLIED_OR_REJECTED';
  if(count>0)assert.ok(check.multiWriteRequests>=1,'Partial application requires real wire write');
- return {classification,candidateExit:1,appliedBytes:count,
+ return {classification,candidateExit:1,appliedBytes:count,externalVerified:true,
    observedWrites:check.multiWriteRequests,readback:check.actualReadback};
 }
 function main(){
