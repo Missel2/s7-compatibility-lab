@@ -28,6 +28,7 @@ function verifyWrite(report,commit){
  assert.ok(check,'Missing real JS write result');
  assert.equal(check.case,'multi_write_padding');
  assert.equal(check.node,'js');
+ assert.equal(check.cleanupError,undefined,'Per-case Node-RED unload/teardown must succeed even when candidate assertion is intentionally red');
  assert.equal(check.positiveSingleByteWrite,true);
  assert.equal(check.positiveSingleWriteRequests,1);
  assert.deepEqual(check.expectedBytes,intended);
