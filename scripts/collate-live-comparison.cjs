@@ -13,11 +13,35 @@ const outcomes=new Set(['KNOWN_UNSAFE','SCOPED_PASS','NOT_OBSERVED_UNSAFE']);
 function digest(bytes){return crypto.createHash('sha256').update(bytes).digest('hex')}
 function collate(inputs, head) {
  assert.match(head,SHA);
- const {positive,write,rustWrite,read,rust,lockBytes}=inputs;
- for(const [name,d] of Object.entries({positive,write,rustWrite,read,rust})){
+ const {positive,python,write,rustWrite,read,rust,lockBytes}=inputs;
+ for(const [name,d] of Object.entries({positive,python,write,rustWrite,read,rust})){
   assert.ok(d && typeof d==='object' && !Array.isArray(d),name+' report must be actual JSON object');
   assert.equal(d.sourceCommit,head,name+' must come from the exact current CI source commit');
  }
+ assert.equal(python.schemaVersion,1);
+ assert.equal(python.scope,'SOFTWARE_LOOPBACK_ONLY');
+ assert.equal(python.candidate,'python-snap7-client');
+ assert.equal(python.version,'3.3.1');
+ assert.equal(python.fixture,'snap7-3.3.1-DB1-2048');
+ assert.equal(python.oracleId,'healthy-DB1-REAL0-INT4-REAL8-and-kernel-TCP-close-v1');
+ assert.equal(python.status,'NOT_QUALIFIED');
+ assert.equal(python.classification,'SCOPED_PASS');
+ assert.equal(python.candidateQualified,false);
+ assert.equal(python.instrumentControlsValid,true);
+ assert.equal(python.originalStrictExit,0);
+ assert.equal(python.cleanClose,true);
+ assert.equal(python.originalReport,'python-snap7-client-original.json');
+ assert.equal(python.rawHex,'41480000ff85060740500000');
+ assert.deepEqual(python.readback,{temperature:12.5,counter:-123,writable:3.25});
+ assert.ok(Number.isSafeInteger(python.readRequests)&&python.readRequests>=1);
+ assert.equal(python.writeRequests,0);
+ assert.ok(Number.isSafeInteger(python.cotpRequests)&&python.cotpRequests>=1);
+ assert.equal(python.activeSessions,0);
+ assert.ok(Number.isSafeInteger(python.closedSessions)&&python.closedSessions>=1);
+ assert.deepEqual(python.relayErrors,[]);
+ assert.ok(python.wireEvidence?.eventCount>=4);
+ assert.match(python.wireEvidence.chainSha256,HEX);
+ assert.match(python.originalSha256,HEX);
  assert.equal(positive.status,'passed');
  assert.equal(positive.nodeRed,'5.0.9');
  assert.equal(positive.packageIds?.js,'4.4.1');
@@ -120,6 +144,7 @@ function collate(inputs, head) {
   cells.push({candidate,scenario,outcome,report,sourceCommit:head});
  }
  for(const x of ['js','rust'])add(x,'READ_HEALTHY_DB1','SCOPED_PASS','common-s7-compare.json');
+ add('python','READ_HEALTHY_DB1','SCOPED_PASS','python-snap7-client-assessment.json');
  add('js','WRITE_THREE_DISJOINT_BYTES','SCOPED_PASS','published-js-three-byte-assessment.json');
  add('rust','WRITE_THREE_DISJOINT_BYTES','SCOPED_PASS','published-rust-three-byte-assessment.json');
  add('js','READ_IMPOSSIBLE_ACK_LENGTH','KNOWN_UNSAFE','published-js-read-characterization.json');
@@ -140,7 +165,7 @@ function collate(inputs, head) {
   fullCandidateQualification:false,globalRanking:null,
   packageLockSha256:digest(lockBytes),
   versions:{js:'@oriolrius/node-red-contrib-s7@4.4.1',jsTransport:'@oriolrius/nodes7@1.1.5',
-   rust:'node-red-contrib-s7-rust@1.4.0',nodeRed:'5.0.9'},
+   rust:'node-red-contrib-s7-rust@1.4.0',python:'python-snap7==3.3.1',nodeRed:'5.0.9'},
   strictCandidateFailuresPreserved:true,independentInstrumentControlsPassed:true,cells};
 }
 // Bind summaries to the actual original report bytes in THIS run. The original
@@ -156,6 +181,7 @@ function verifyRawLinks(inputs, reportDir, head){
   expected.set(file,claimedDigest);
  }
  add('common-s7-compare.json',inputs.read.positiveControl?.reportSha256);
+ add('python-snap7-client-original.json',inputs.python.originalSha256);
  add('published-js-three-byte-write.json',inputs.write.reportSha256);
  add('published-rust-three-byte-write.json',inputs.rustWrite.reportSha256);
  for(const r of inputs.read.results)add(r.report,r.reportSha256);
@@ -168,7 +194,7 @@ function verifyRawLinks(inputs, reportDir, head){
   assert.equal(r.report,rustMap[r.name],'Original Rust report misassociated with a behavior');
   add(r.report,r.reportSha256);
  }
- assert.equal(expected.size,9,'Exactly 9 actual positive/strict candidate report files required');
+ assert.equal(expected.size,10,'Exactly 10 actual positive/strict candidate report files required');
  const result={};
  for(const [name,claimed] of expected){
   const raw=fs.readFileSync(path.join(reportDir,name));
@@ -186,12 +212,12 @@ function main(){
  const head=process.env.GITHUB_SHA;
  assert.match(head||'',SHA,'GITHUB_SHA must pin an actual CI run');
  const dir=path.join(root,'test-reports');
- const names=['common-s7-compare.json','published-js-three-byte-assessment.json',
+ const names=['common-s7-compare.json','python-snap7-client-assessment.json','published-js-three-byte-assessment.json',
   'published-rust-three-byte-assessment.json','published-js-read-characterization.json',
   'rust-1.4.0-baseline-assessment.json'];
  const bytes=names.map(n=>fs.readFileSync(path.join(dir,n)));
- const inputs={positive:JSON.parse(bytes[0]),write:JSON.parse(bytes[1]),rustWrite:JSON.parse(bytes[2]),
-  read:JSON.parse(bytes[3]),rust:JSON.parse(bytes[4]),
+ const inputs={positive:JSON.parse(bytes[0]),python:JSON.parse(bytes[1]),write:JSON.parse(bytes[2]),
+  rustWrite:JSON.parse(bytes[3]),read:JSON.parse(bytes[4]),rust:JSON.parse(bytes[5]),
   lockBytes:fs.readFileSync(path.join(root,'.candidate-consumer/package-lock.json'))};
  const result=collate(inputs,head);
  result.originalStrictReportHashes=verifyRawLinks(inputs,dir,head);
