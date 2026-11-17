@@ -124,6 +124,38 @@ async function startFixture() {
     throw error;
   }
 }
+async function externalReadback(port) {
+  const child = spawn(
+    process.env.S7_FIXTURE_PYTHON || "python",
+    ["-u", "scripts/s7_external_db1_readback.py", "--port", String(port)],
+    { cwd: root, stdio: ["ignore", "pipe", "pipe"] },
+  );
+  let output = "";
+  let errors = "";
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (part) => { output += part; });
+  child.stderr.on("data", (part) => { errors += part; });
+  try {
+    const [code, signal] = await bound(once(child, "close"), 12000, "external DB1 witness");
+    assert.equal(signal, null, "External witness unexpectedly signalled");
+    assert.equal(code, 0, "External Python S7 client failed: " + errors.slice(-1200));
+    const result = JSON.parse(output.trim());
+    assert.equal(result.status, "passed");
+    assert.equal(result.source, "python-snap7==3.3.1 external S7Comm client");
+    assert.equal(result.host, "127.0.0.1");
+    assert.equal(result.db, 1);
+    assert.equal(result.start, 1801);
+    assert.equal(result.length, 5);
+    assert.deepEqual(result.untouched, [10, 12]);
+    assert.match(result.spanSha256, /^[a-f0-9]{64}$/);
+    assert.match(result.spanHex, /^[a-f0-9]{10}$/);
+    assert.ok(Array.isArray(result.values) && result.values.length === 3);
+    return result;
+  } finally {
+    if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+  }
+}
 function nodes(mode, port, vars) {
   if (mode === "js")
     return {
@@ -369,6 +401,26 @@ async function main() {
     for (const mode of [selectedEngine]) {
       report.results[mode] = {};
       await runOne(mode, peer.port, "multi_write_padding", writable, peer);
+      // Completely different S7 client, new TCP connection, read-only.
+      // Do not trust an implementation's own read cache as the sole
+      // evidence that its WRITE_VAR actually modified synthetic DB1.
+      const writeResult = report.results[mode].multi_write_padding;
+      try {
+        const witness = await externalReadback(server.port);
+        writeResult.externalReadback = witness.values;
+        writeResult.externalSpanSha256 = witness.spanSha256;
+        writeResult.externalSpanHex = witness.spanHex;
+        writeResult.externalUntouched = witness.untouched;
+        writeResult.externalWitness = witness.source;
+        assert.deepEqual(
+          witness.values,
+          writeResult.actualReadback,
+          "Native/JS client readback disagrees with the independent S7Comm witness",
+        );
+      } catch (error) {
+        writeResult.externalReadbackError = String(error?.stack || error).slice(0, 1400);
+        writeResult.verdict = "failed";
+      }
     }
     report.status = Object.values(report.results).every((suite) =>
       Object.values(suite).every((x) => x.verdict === "passed"),
