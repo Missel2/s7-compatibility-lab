@@ -35,3 +35,7 @@
 ## HIL and releases
 
 Seven HIL gates remain **PENDING_HARDWARE**. Do not connect CI to physical controllers, install on production, publish npm, or infer industrial safety from simulator-only checks. Hardware testing requires a distinct explicit authorization and isolated plan. Merge only after exact-head checks, review and human approval under [AGENTS.md](../AGENTS.md).
+
+### Stacked current change (not merged)
+
+- [ ] [PR #16](https://github.com/Missel2/s7-compatibility-lab/pull/16) on PR #14: 3-BYTE write scenario is now exercised by **both** published JS and Rust via the same source oracle; an independent Python S7Comm client separately verifies DB1 target and adjacent spacer bytes. [Real CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856) observed both `[15,29,43]` values with one write frame per candidate, eleven live result cells, no candidate qualification. PR #13 is separately merged and its historical unsafe Alpha2 finding remains unqualified.
