@@ -23,3 +23,15 @@ The new native assessor `scripts/assess-published-rust-write.cjs` calls the **sa
 This scenario proves byte accuracy in a bounded software fixture, not transactional all-or-nothing S7 multi-item semantics for failures in the middle of execution. A single user-level command may map to one or more real physical `WRITE_VAR` frames; the exact measured count is preserved rather than inferred. This operation also does **not** test large array/payload splitting, write ACK ambiguity, S7CommPlus, ARM/Windows support, physical PLC firmware or long-run performance.
 
 The historical `@missel2` Alpha2 regression lives in independent open PR #13. A green Rust write scenario cannot erase its old partial write, nor can either healthy multi-BYTE write excuse a separate Rust lost-ACK replay or JavaScript invalid AckData length.
+
+## First actual same-run result — 17 November 2026
+
+[GitHub Actions #44030185876](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030185876), from stacked PR #16 against open PR #14, executed unmodified published JS and native Rust in the same job:
+
+```json
+{"javascript":{"classification":"COMPLETE_WRITE_OBSERVED","candidateExit":0,"appliedBytes":3,"observedWrites":1,"readback":[15,29,43]},"rust":{"classification":"COMPLETE_WRITE_OBSERVED","candidateExit":0,"appliedBytes":3,"observedWrites":1,"readback":[15,29,43]}}
+```
+
+The collator reported **11 source-commit-bound scenario results**, including the new Rust write result, and **four separate known-unsafe outcomes** that remain unsafe. All **13** JS/Rust shared-assessor and collator unit tests passed in this run. Its output is archived in [the same-run artifact](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030185876/artifacts/14304374501).
+
+The CI job ran at GitHub's PR merge-test source SHA `f0ba3f4027ee41db0b95b723c3cebbdbc0d3211a`, not the branch-head SHA. The historical comparison catalog records this as `PR_OPEN` evidence, so a complete *reviewed/merged* three-candidate matrix must still remain incomplete.
