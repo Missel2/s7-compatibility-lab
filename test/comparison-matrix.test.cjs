@@ -24,7 +24,8 @@ test('three actual version identities, all evidence links and schema validate',(
   assert.equal(a.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').outcome,'NOT_OBSERVED_UNSAFE');
   assert.equal(a.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').phase,'PR_OPEN');
   assert.equal(a.cells.find(x=>x.candidate==='rust-1_4_0').outcome,'KNOWN_UNSAFE');
-  assert.equal(m.completeComparisonScenarios.length,0);
+  assert.deepEqual(m.completeComparisonScenarios,['WRITE_THREE_DISJOINT_BYTES'],
+    'Historical index covers three merged versions on this specific oracle, without implying same-run/hardware qualification');
 });
 test('historical unsafe JS and newer published JS positive must not cancel each other',()=>{
   const w=buildMatrix(baseline).rows.find(x=>x.id==='WRITE_THREE_DISJOINT_BYTES');
