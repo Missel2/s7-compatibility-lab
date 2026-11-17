@@ -96,6 +96,7 @@ function collate(inputs, head) {
   assert.equal(x.outcome,outcome);
   assert.equal(x.exitCode,exit);
   assert.ok(typeof x.report==='string' && x.report.endsWith('.json'));
+  assert.match(x.reportSha256,HEX,'Every Rust original strict report requires the assessed-byte SHA-256');
  }
  assert.ok(Buffer.isBuffer(lockBytes),'Input exact npm lock bytes required');
  const lock=JSON.parse(lockBytes);
@@ -165,7 +166,7 @@ function verifyRawLinks(inputs, reportDir, head){
  };
  for(const r of inputs.rust.outputs){
   assert.equal(r.report,rustMap[r.name],'Original Rust report misassociated with a behavior');
-  add(r.report);
+  add(r.report,r.reportSha256);
  }
  assert.equal(expected.size,9,'Exactly 9 actual positive/strict candidate report files required');
  const result={};
