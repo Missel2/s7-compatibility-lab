@@ -29,6 +29,7 @@ function verifyIndependentReport(report,raw,head,mode){
  assert.equal(report.serverImplementation,"INDEPENDENT_NODE_COTP_S7COMM");
  assert.equal(report.serverDependency,"NODE_BUILTINS_ONLY");
  assert.match(report.serverSourceSha256,d64);
+ assert.equal(report.serverSourceSha256,digest(fs.readFileSync(srcFixture)),"Independent server source has drifted since evidence");
  assert.equal(report.disconnectMode,mode);
  assert.equal(report.candidate,"org.apache.plc4x:plc4j-driver-s7:1.0.0");
  assert.equal(report.driverJarSha256,knownDriver);
@@ -40,6 +41,10 @@ function verifyIndependentReport(report,raw,head,mode){
  assert.equal(report.originalTruncated,false);
  assert.equal(report.originalSha256,digest(raw));
  const original=JSON.parse(raw.toString("utf8"));
+ assert.deepEqual(Object.keys(original).sort(),[
+  "schemaVersion","sourceCommit","candidate","version","scope","protocol",
+  "oracleId","host","db","status","clientCloseInvoked","candidateQualified","observed"
+ ].sort(),"Original Java result must not contain additional unreviewed fields");
  assert.equal(original.schemaVersion,1);
  assert.equal(original.sourceCommit,head);
  assert.equal(original.candidate,"apache-plc4x-java");
@@ -68,8 +73,43 @@ function verifyIndependentReport(report,raw,head,mode){
  assert.equal(s.events[0].length>=11,true);
  assert.equal(s.events.some(x=>x.direction==="server_tx"),true);
  assert.equal(s.received.length,4,"Exactly CR/SETUP/READ/DR framed requests");
- assert.equal(s.received[0].slice(10,12),"e0");
- assert.equal(s.received[3].slice(10,12),"80");
+ assert.equal(s.sent.length,mode==="confirm"?4:3,"Expected real COTP+S7 response count");
+ const frame=hex=>{
+  assert.match(hex,/^(?:[0-9a-f]{2})+$/);
+  const raw=Buffer.from(hex,"hex");
+  assert.ok(raw.length>=7);assert.equal(raw[0],3);assert.equal(raw[1],0);
+  assert.equal(raw.readUInt16BE(2),raw.length);
+  return raw;
+ };
+ const cr=frame(s.received[0]),setup=frame(s.received[1]);
+ const read=frame(s.received[2]),disconnect=frame(s.received[3]);
+ assert.equal(cr[5],0xe0);assert.equal(setup[5],0xf0);
+ assert.equal(read[5],0xf0);assert.equal(disconnect[5],0x80);
+ assert.equal(disconnect.length,11);
+ assert.equal(read.subarray(17).toString("hex"),"0401120a1002000c000184000000",
+  "Exact published PLC4X one-item contiguous synthetic DB1[0:12] READ_VAR");
+ const reply=frame(s.sent[2]);
+ assert.equal(reply[8],3);assert.equal(reply[19],4);assert.equal(reply[20],1);
+ assert.equal(reply.subarray(21).toString("hex"),"ff04006041480000ff85060740500000",
+  "Independent Node response must contain exactly the expected 12 real synthetic bytes");
+ const inEvents=s.events.filter(e=>e.direction==="client_rx");
+ const outEvents=s.events.filter(e=>e.direction==="server_tx");
+ assert.equal(inEvents.length,s.received.length);
+ assert.equal(outEvents.length,s.sent.length);
+ for(let i=0;i<inEvents.length;i++){
+  const raw=frame(s.received[i]);
+  assert.equal(inEvents[i].sha256,digest(raw),"Forged client PDU digest");
+  assert.equal(inEvents[i].length,raw.length);
+ }
+ for(let i=0;i<outEvents.length;i++){
+  const raw=frame(s.sent[i]);
+  assert.equal(outEvents[i].sha256,digest(raw),"Forged server PDU digest");
+  assert.equal(outEvents[i].length,raw.length);
+ }
+ if(mode==="confirm"){
+  const dc=frame(s.sent[3]);assert.equal(dc[5],0xc0);
+  assert.equal(dc.length,10);
+ }
  assert.equal(report.originalStrictCandidateExit,report.classification==="KNOWN_UNSAFE"?1:0);
  const trailer=s.invalidTail;
  if(trailer){
@@ -80,6 +120,7 @@ function verifyIndependentReport(report,raw,head,mode){
   assert.equal(trailer.totalObserved,21);
   assert.equal(trailer.sha256,expectedZeroSha);
   assert.equal(trailer.allZero,true);
+  assert.equal(trailer.prefixHex,"00".repeat(21));
   assert.equal(trailer.truncated,false);
   assert.equal(trailer.complete,true);
   assert.ok(["TCP_FIN","TCP_CLOSE"].includes(trailer.termination));
