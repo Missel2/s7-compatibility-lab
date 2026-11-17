@@ -19,8 +19,13 @@ test('three actual version identities, all evidence links and schema validate',(
   assert.ok(m.comparableScenarios.includes('WRITE_THREE_DISJOINT_BYTES'));
   assert.ok(m.comparableScenarios.includes('READ_WRONG_PDU_REFERENCE'));
   assert.ok(m.comparableScenarios.includes('READ_IMPOSSIBLE_ACK_LENGTH'));
-  assert.ok(!m.comparableScenarios.includes('WRITE_ACK_LOST_AFTER_APPLY'));
-  assert.equal(m.completeComparisonScenarios.length,0);
+  assert.ok(m.comparableScenarios.includes('WRITE_ACK_LOST_AFTER_APPLY'));
+  const a=m.rows.find(x=>x.id==='WRITE_ACK_LOST_AFTER_APPLY');
+  assert.equal(a.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').outcome,'NOT_OBSERVED_UNSAFE');
+  assert.equal(a.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').phase,'PR_OPEN');
+  assert.equal(a.cells.find(x=>x.candidate==='rust-1_4_0').outcome,'KNOWN_UNSAFE');
+  assert.deepEqual(m.completeComparisonScenarios,['WRITE_THREE_DISJOINT_BYTES'],
+    'Historical index covers three merged versions on this specific oracle, without implying same-run/hardware qualification');
 });
 test('historical unsafe JS and newer published JS positive must not cancel each other',()=>{
   const w=buildMatrix(baseline).rows.find(x=>x.id==='WRITE_THREE_DISJOINT_BYTES');
@@ -29,10 +34,10 @@ test('historical unsafe JS and newer published JS positive must not cancel each 
   assert.equal(w.cells.find(c=>c.candidate==='missel-js-alpha2').phase,'MERGED_BASELINE');
   assert.equal(w.cells.find(c=>c.candidate==='oriolrius-js-4_4_1').outcome,'SCOPED_PASS');
   assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').outcome,'SCOPED_PASS');
-  assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').phase,'PR_OPEN');
+  assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').phase,'MERGED_BASELINE');
   assert.equal(w.observedCandidates,3);
   assert.equal(w.allVersionsObserved,true);
-  assert.equal(w.fullCoverage,false,'Open PR #16 is not merged full coverage');
+  assert.equal(w.fullCoverage,true,'PR #16 is now merged; all three historical version cells exist, not hardware qualified');
 });
 test('wrong PDU and impossible length show opposing version-specific behavior',()=>{
   const rows=buildMatrix(baseline).rows;

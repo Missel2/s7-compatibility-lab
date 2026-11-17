@@ -6,6 +6,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const crypto=require('node:crypto');
 const assert=require('node:assert/strict');
+const {verifyAckLoss}=require('./assess-published-js-lost-write-ack.cjs');
 const root=path.join(__dirname,'..');
 const SHA=/^[a-f0-9]{40}$/;
 const HEX=/^[a-f0-9]{64}$/;
@@ -13,8 +14,8 @@ const outcomes=new Set(['KNOWN_UNSAFE','SCOPED_PASS','NOT_OBSERVED_UNSAFE']);
 function digest(bytes){return crypto.createHash('sha256').update(bytes).digest('hex')}
 function collate(inputs, head) {
  assert.match(head,SHA);
- const {positive,write,rustWrite,read,rust,lockBytes}=inputs;
- for(const [name,d] of Object.entries({positive,write,rustWrite,read,rust})){
+ const {positive,write,rustWrite,jsAck,read,rust,lockBytes}=inputs;
+ for(const [name,d] of Object.entries({positive,write,rustWrite,jsAck,read,rust})){
   assert.ok(d && typeof d==='object' && !Array.isArray(d),name+' report must be actual JSON object');
   assert.equal(d.sourceCommit,head,name+' must come from the exact current CI source commit');
  }
@@ -53,6 +54,25 @@ function collate(inputs, head) {
  assert.ok(Number.isSafeInteger(rustWrite.observedWrites)&&rustWrite.observedWrites>=1);
  assert.equal(rustWrite.originalStrictExit,0,'Original native strict probe must really pass');
  assert.match(rustWrite.reportSha256,HEX);
+ // Separate actual JS ACK-loss probe must report the narrow real on-wire
+ // outcome, never a blanket success or a copied Rust conclusion.
+ assert.equal(jsAck.schemaVersion,1);
+ assert.equal(jsAck.scope,'SOFTWARE_LOOPBACK_ONLY');
+ assert.equal(jsAck.status,'NOT_QUALIFIED');
+ assert.equal(jsAck.candidatePass,false);
+ assert.equal(jsAck.fullCandidateQualification,false);
+ assert.equal(jsAck.instrumentControlsValid,true);
+ assert.equal(jsAck.candidate,'@oriolrius/node-red-contrib-s7@4.4.1');
+ assert.equal(jsAck.contract,'WRITE_ACK_LOST_AFTER_APPLY');
+ assert.equal(jsAck.classification,'NO_REPLAY_OBSERVED_OUTCOME_UNASSESSED',
+   'Unexpected JS retry/success behavior: fail the shared baseline until separately assessed');
+ assert.equal(jsAck.originalExit,0,'Actual strict original no-replay assertion must pass');
+ assert.equal(jsAck.wireWrites,1);
+ assert.equal(jsAck.replayCount,0);
+ assert.equal(jsAck.fixtureApplied,true);
+ assert.equal(jsAck.externalVerified,true);
+ assert.equal(jsAck.report,'published-js-lost-write-ack.json');
+ assert.match(jsAck.reportSha256,HEX);
  assert.equal(read.scope,'SOFTWARE_LOOPBACK_ONLY');
  assert.equal(read.candidatePass,false);
  assert.equal(read.instrumentControlsValid,true);
@@ -128,6 +148,7 @@ function collate(inputs, head) {
  add('rust','READ_IMPOSSIBLE_ACK_LENGTH','SCOPED_PASS','rust-1.4.0-baseline-assessment.json');
  add('rust','READ_WRONG_PDU_REFERENCE','KNOWN_UNSAFE','rust-1.4.0-baseline-assessment.json');
  add('rust','WRITE_ACK_LOST_AFTER_APPLY','KNOWN_UNSAFE','rust-1.4.0-baseline-assessment.json');
+ add('js','WRITE_ACK_LOST_AFTER_APPLY','NOT_OBSERVED_UNSAFE','published-js-lost-write-ack-assessment.json');
  add('rust','COTP_AFTER_EXPLICIT_UNLOAD','KNOWN_UNSAFE','rust-1.4.0-baseline-assessment.json');
  const ids=new Set();
  for(const cell of cells){
@@ -158,6 +179,7 @@ function verifyRawLinks(inputs, reportDir, head){
  add('common-s7-compare.json',inputs.read.positiveControl?.reportSha256);
  add('published-js-three-byte-write.json',inputs.write.reportSha256);
  add('published-rust-three-byte-write.json',inputs.rustWrite.reportSha256);
+ add('published-js-lost-write-ack.json',inputs.jsAck.reportSha256);
  for(const r of inputs.read.results)add(r.report,r.reportSha256);
  const rustMap={
   correct_header_rejection:'malformed-read-rust-inconsistent_data_length.json',
@@ -168,13 +190,19 @@ function verifyRawLinks(inputs, reportDir, head){
   assert.equal(r.report,rustMap[r.name],'Original Rust report misassociated with a behavior');
   add(r.report,r.reportSha256);
  }
- assert.equal(expected.size,9,'Exactly 9 actual positive/strict candidate report files required');
+ assert.equal(expected.size,10,'Exactly 10 actual positive/strict candidate report files required');
  const result={};
  for(const [name,claimed] of expected){
   const raw=fs.readFileSync(path.join(reportDir,name));
   const record=JSON.parse(raw);
   assert.ok(record && typeof record==='object' && !Array.isArray(record),'Malformed original JSON '+name);
   if(record.sourceCommit!==undefined)assert.equal(record.sourceCommit,head,name+' stale original report');
+  if(name==='published-js-lost-write-ack.json'){
+   const checked=verifyAckLoss(record,head);
+   assert.equal(checked.classification,inputs.jsAck.classification);
+   assert.equal(checked.originalExit,inputs.jsAck.originalExit);
+   assert.equal(checked.wireWrites,inputs.jsAck.wireWrites);
+  }
   const actual=digest(raw);
   if(claimed!==null)assert.equal(claimed,actual,'Summary digest does not match original JSON bytes: '+name);
   result[name]=actual;
@@ -187,11 +215,11 @@ function main(){
  assert.match(head||'',SHA,'GITHUB_SHA must pin an actual CI run');
  const dir=path.join(root,'test-reports');
  const names=['common-s7-compare.json','published-js-three-byte-assessment.json',
-  'published-rust-three-byte-assessment.json','published-js-read-characterization.json',
-  'rust-1.4.0-baseline-assessment.json'];
+  'published-rust-three-byte-assessment.json','published-js-lost-write-ack-assessment.json',
+  'published-js-read-characterization.json','rust-1.4.0-baseline-assessment.json'];
  const bytes=names.map(n=>fs.readFileSync(path.join(dir,n)));
  const inputs={positive:JSON.parse(bytes[0]),write:JSON.parse(bytes[1]),rustWrite:JSON.parse(bytes[2]),
-  read:JSON.parse(bytes[3]),rust:JSON.parse(bytes[4]),
+  jsAck:JSON.parse(bytes[3]),read:JSON.parse(bytes[4]),rust:JSON.parse(bytes[5]),
   lockBytes:fs.readFileSync(path.join(root,'.candidate-consumer/package-lock.json'))};
  const result=collate(inputs,head);
  result.originalStrictReportHashes=verifyRawLinks(inputs,dir,head);

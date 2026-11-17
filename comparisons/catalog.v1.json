@@ -356,7 +356,7 @@
       "candidate": "rust-1_4_0",
       "scenario": "WRITE_THREE_DISJOINT_BYTES",
       "outcome": "SCOPED_PASS",
-      "phase": "PR_OPEN",
+      "phase": "MERGED_BASELINE",
       "evidence": {
         "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856",
         "commit": "b477b68164bc3c8dd1929d5dbd7f7da69c5efbf5",
@@ -364,8 +364,25 @@
         "assertion": "Original native process exit 0; one real WRITE_VAR; [15,29,43] observed by native driver AND a separate Python S7Comm client, neighboring DB1 bytes [10,12] unchanged; same-run published JS oracle"
       },
       "limitations": [
-        "PR #16 remains unmerged; the recorded raw candidate run is a prior stacked PR-test snapshot and must be revalidated against current main",
+        "PR #16 merged into main at 56f482590ce59353be02a66b880a4b4e88d72912; cited original CI is a version-pinned prior PR run",
         "Only synthetic 127.0.0.1 DB1; no physical PLC qualification"
+      ]
+    },
+    {
+      "candidate": "oriolrius-js-4_4_1",
+      "scenario": "WRITE_ACK_LOST_AFTER_APPLY",
+      "outcome": "NOT_OBSERVED_UNSAFE",
+      "phase": "PR_OPEN",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/44034745020",
+        "commit": "906bb1e4af5229a69b7af1876708211fa32cd664",
+        "artifact": "published-js-lost-write-ack-assessment.json",
+        "assertion": "Fixture physically applied WRITE_VAR REAL8=-8.5, one positive ACK was withheld; Node-RED JS 4.4.1 emitted only one real write in 11-second observation, an error callback was observed, and separate read-only python-snap7 3.3.1 S7Comm DB1 client independently verified -8.5 and SHA-256 with unchanged REAL0/INT4"
+      },
+      "limitations": [
+        "PR #18 remains unmerged; the recorded observation is a prior real PR-test snapshot, not merged source",
+        "No replay observed does not prove correct client-facing ambiguous-outcome reporting",
+        "Synthetic 127.0.0.1 DB1, 11-second JS observation; Rust previous failure had a different bounded timing window; no Siemens hardware testing"
       ]
     }
   ]
