@@ -30,3 +30,13 @@ No programmable controller, industrial network, S7CommPlus, firmware-specific pa
 ## Source provenance
 
 `lib/wire-peer.cjs` (the relay), `fixtures/s7_server.py` (the simulator) and the Node-RED integration idioms in `test/candidates/published-js-lost-write-ack.cjs` originate ultimately from the GPL-3.0-or-later fork `Missel2/node-red-contrib-s7` at [e94bb29490f8ecfd22fdc7f6cf4e6e012e784393](https://github.com/Missel2/node-red-contrib-s7/tree/e94bb29490f8ecfd22fdc7f6cf4e6e012e784393), including `test/comparison/rust-ci-parity.cjs` and `test/comparison/historical-s7-regressions.cjs`. The new JavaScript candidate scenario adapts the existing in-repo published-JS Node-RED flow and Rust lost-ACK fault semantics; no third-party JS driver or Rust binary code is vendored. The new witness, fail-closed assessor, negative controls and workflow are GPL-3.0-or-later lab source. Published driver packages stay separately installed and unmodified.
+
+## First executed result (2026-11-17)
+
+The first [real published-JavaScript ACK-loss job #44034745020](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44034745020) completed successfully, **four out of four assessor unit tests** and actual synthetic process report:
+
+```json
+{"classification":"NO_REPLAY_OBSERVED_OUTCOME_UNASSESSED","originalExit":0,"wireWrites":1,"replayCount":0,"fixtureApplied":true,"externalVerified":true,"observedErrors":1}
+```
+
+The published JavaScript driver emitted **one real WRITE_VAR** after the positive upstream ACK had been omitted from the client. An error callback was observed. This is a materially different narrow replay result than the previously established Rust 1.4.0 **duplicate write** in the same broad applied-write/ACK-loss fault family, but *not* an equivalence proof of all timing and user-API semantics: this JavaScript probe watches for 11 seconds while the prior Rust parity test used a shorter post-fault observation; neither observation constitutes Siemens CPU qualification. The next step runs both original probes and the independent report binder inside a single CI job and adds an explicit scenario cell to the comparison index.
