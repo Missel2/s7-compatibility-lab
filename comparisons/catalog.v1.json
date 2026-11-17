@@ -380,7 +380,7 @@
         "assertion": "Fixture physically applied WRITE_VAR REAL8=-8.5, one positive ACK was withheld; Node-RED JS 4.4.1 emitted only one real write in 11-second observation, an error callback was observed, and separate read-only python-snap7 3.3.1 S7Comm DB1 client independently verified -8.5 and SHA-256 with unchanged REAL0/INT4"
       },
       "limitations": [
-        "PR #18 is open; currently scoped evidence from an earlier GitHub PR-test merge commit, not merged source",
+        "PR #18 remains unmerged; the recorded observation is a prior real PR-test snapshot, not merged source",
         "No replay observed does not prove correct client-facing ambiguous-outcome reporting",
         "Synthetic 127.0.0.1 DB1, 11-second JS observation; Rust previous failure had a different bounded timing window; no Siemens hardware testing"
       ]
