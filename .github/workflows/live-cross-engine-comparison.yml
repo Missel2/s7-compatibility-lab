@@ -36,7 +36,7 @@ jobs:
           python -m py_compile scripts/candidates/python-snap7-read.py
           node --check scripts/assess-python-snap7-client.cjs
           node --check scripts/characterize-plc4x-java-disconnect.cjs
-          node --test test/plc4x-client.test.cjs test/plc4x-teardown-characterization.test.cjs
+          node --test test/plc4x-client.test.cjs test/plc4x-teardown-characterization.test.cjs test/wire-peer-malformed-fragments.test.cjs
           node --test test/live-comparison-collator.test.cjs test/published-js-write-assessor.test.cjs test/published-rust-write-assessor.test.cjs test/published-js-lost-ack-assessor.test.cjs test/python-snap7-client.test.cjs
       - name: Run separate published Python 3.3.1 S7Comm READ_VAR through independent wire observer
         run: node scripts/assess-python-snap7-client.cjs
