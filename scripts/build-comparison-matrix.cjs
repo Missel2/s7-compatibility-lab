@@ -89,7 +89,10 @@ function buildMatrix(c) {
       relevant.every(x=>candidateMap.get(x.candidate).platform===candidateMap.get(relevant[0].candidate).platform);
     return {id:s.id,family:s.family,protocol:s.protocol,priority:s.priority,
       oracle:s.oracle,fixture:s.fixture,cells,comparable,observedCandidates:relevant.length,
-      fullCoverage:relevant.length===c.candidates.length && comparable};
+      allVersionsObserved:relevant.length===c.candidates.length && comparable,
+      // An open PR cannot be counted as merged baseline coverage.
+      fullCoverage:relevant.length===c.candidates.length && comparable &&
+        relevant.every(x=>x.phase==='MERGED_BASELINE')};
   });
   const observations=c.observations.length;
   const counts={KNOWN_UNSAFE:0,SCOPED_PASS:0,NOT_OBSERVED_UNSAFE:0};

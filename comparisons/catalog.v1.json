@@ -351,6 +351,22 @@
         "artifact": "rust-1.4.0-baseline-assessment.json",
         "assertion": "extra COTP attempts observed after explicit flow unload; no persistent sockets at end"
       }
+    },
+    {
+      "candidate": "rust-1_4_0",
+      "scenario": "WRITE_THREE_DISJOINT_BYTES",
+      "outcome": "SCOPED_PASS",
+      "phase": "PR_OPEN",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856",
+        "commit": "b477b68164bc3c8dd1929d5dbd7f7da69c5efbf5",
+        "artifact": "published-rust-three-byte-assessment.json",
+        "assertion": "Original native process exit 0; one real WRITE_VAR; [15,29,43] observed by native driver AND a separate Python S7Comm client, neighboring DB1 bytes [10,12] unchanged; same-run published JS oracle"
+      },
+      "limitations": [
+        "PR #16 remains unmerged; the recorded raw candidate run is a prior stacked PR-test snapshot and must be revalidated against current main",
+        "Only synthetic 127.0.0.1 DB1; no physical PLC qualification"
+      ]
     }
   ]
 }

@@ -12,8 +12,11 @@ const OUT=path.join(root,'test-reports/published-js-three-byte-assessment.json')
 const SHA=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
 const intended=[15,29,43];
 const offsets=[1801,1803,1805];
-function verifyWrite(report,commit){
+function verifyWrite(report,commit,engine='js'){
  assert.equal(report.schemaVersion,1);
+ assert.ok(['js','rust'].includes(engine));
+ assert.equal(report.selectedEngine,engine);
+ assert.equal(report.oracleId,'byte-write-1801-1803-1805-15-29-43-v1');
  assert.equal(report.sourceCommit,commit);
  assert.equal(report.jsVersion,'4.4.1');
  assert.equal(report.nodeRed,'5.0.9');
@@ -24,10 +27,10 @@ function verifyWrite(report,commit){
  for(const field of ['fatal','stopError','proxyError','fixtureError'])
    assert.equal(report[field],undefined,field+' indicates harness failure');
  assert.deepEqual(report.relayErrors,[]);
- const check=report.results?.js?.multi_write_padding;
+ const check=report.results?.[engine]?.multi_write_padding;
  assert.ok(check,'Missing real JS write result');
  assert.equal(check.case,'multi_write_padding');
- assert.equal(check.node,'js');
+ assert.equal(check.node,engine);
  assert.equal(check.positiveSingleByteWrite,true);
  assert.equal(check.positiveSingleWriteRequests,1);
  assert.deepEqual(check.expectedBytes,intended);
@@ -40,6 +43,18 @@ function verifyWrite(report,commit){
  assert.ok(check.wireEvidence?.eventCount>0,'Require real original frame measurements');
  assert.ok(check.wireEvidence?.events?.some(e=>e.direction==='client_rx' && /^[a-f0-9]{64}$/.test(e.frameSha256)));
  assert.match(check.wireEvidence.chainSha256,/^[a-f0-9]{64}$/);
+ assert.equal(check.externalReadbackError,undefined,'Independent S7Comm witness failed');
+ assert.equal(check.externalWitness,'python-snap7==3.3.1 external S7Comm client');
+ assert.deepEqual(check.externalUntouched,[10,12],'Adjacent DB1 bytes must remain unmodified');
+ assert.deepEqual(check.externalReadback,check.actualReadback,
+  'The independent separate-client DB1 readback contradicts the candidate');
+ assert.match(check.externalSpanSha256,/^[a-f0-9]{64}$/);
+ assert.match(check.externalSpanHex,/^[a-f0-9]{10}$/);
+ const witnessed=Buffer.from(check.externalSpanHex,'hex');
+ assert.deepEqual([witnessed[0],witnessed[2],witnessed[4]],check.actualReadback);
+ assert.deepEqual([witnessed[1],witnessed[3]],[10,12]);
+ assert.equal(crypto.createHash('sha256').update(witnessed).digest('hex'),
+  check.externalSpanSha256,'Independent DB1 span hash mismatch');
  const applied=check.actualReadback.map((x,i)=>x===intended[i]);
  const count=applied.filter(Boolean).length;
  const all=count===3;
@@ -48,7 +63,7 @@ function verifyWrite(report,commit){
   assert.equal(check.readbackComplete,true);
   assert.ok(check.multiWriteRequests>=1,'No real wire write');
   assert.equal(check.error,undefined);
-  return {classification:'COMPLETE_WRITE_OBSERVED',candidateExit:0,appliedBytes:3,
+  return {classification:'COMPLETE_WRITE_OBSERVED',candidateExit:0,appliedBytes:3,externalVerified:true,
     observedWrites:check.multiWriteRequests,readback:check.actualReadback};
  }
  assert.equal(check.verdict,'failed');
@@ -58,7 +73,7 @@ function verifyWrite(report,commit){
  // legitimate complete rejection or an unsupported API. Never conflate.
  const classification=count>0?'PARTIAL_WRITE_KNOWN_UNSAFE':'NO_WRITE_APPLIED_OR_REJECTED';
  if(count>0)assert.ok(check.multiWriteRequests>=1,'Partial application requires real wire write');
- return {classification,candidateExit:1,appliedBytes:count,
+ return {classification,candidateExit:1,appliedBytes:count,externalVerified:true,
    observedWrites:check.multiWriteRequests,readback:check.actualReadback};
 }
 function main(){
@@ -69,6 +84,7 @@ function main(){
  const summary={schemaVersion:1,sourceCommit:commit,scope:'SOFTWARE_LOOPBACK_ONLY',
   package:'@oriolrius/node-red-contrib-s7',version:'4.4.1',
   historicalAlpha:'@missel2/node-red-contrib-s7@0.1.0-alpha.2',
+  oracleId:'byte-write-1801-1803-1805-15-29-43-v1',
   status:'NOT_QUALIFIED',candidatePass:false,fullCandidateQualification:false};
  try{
   const proc=spawnSync(process.execPath,['test/candidates/published-js-three-byte-write.cjs',path.join(root,'.candidate-consumer')],{
