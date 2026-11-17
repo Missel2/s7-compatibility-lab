@@ -40,7 +40,15 @@ Seven HIL gates remain **PENDING_HARDWARE**. Do not connect CI to physical contr
 
 - [x] [PR #16](https://github.com/Missel2/s7-compatibility-lab/pull/16) was merged: 3-BYTE write scenario is now exercised by **both** published JS and Rust via the same source oracle; an independent Python S7Comm client separately verifies DB1 target and adjacent spacer bytes. [Real CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856) observed both `[15,29,43]` values with one write frame per candidate, eleven live result cells at the cited earlier run, no candidate qualification. PR #13 is separately merged and its historical unsafe Alpha2 finding remains unqualified.
 
-- [ ] [PR #19](https://github.com/Missel2/s7-compatibility-lab/pull/19) (unmerged): first real external Python client, independent process, 12 exact DB1 bytes, real COTP/READ_VAR and clean close; 5/5 adversarial tests. [Original real CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44037883892).
-- [ ] Four-candidate versioned capability declarations (56 scenario cells) + source-bound same-head client evidence. [Shared CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44038695742) executes Python along with the JS/Rust clients.
+- [x] [PR #19](https://github.com/Missel2/s7-compatibility-lab/pull/19) (merged): first real external Python client, independent process, 12 exact DB1 bytes, real COTP/READ_VAR and clean close; 5/5 adversarial tests. [Original real CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44037883892).
+- [x] Four-candidate versioned capability declarations (56 scenario cells) + source-bound same-head client evidence. [Shared CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44038695742) executes Python along with the JS/Rust clients.
 - [ ] Next independent client ecosystem: Apache PLC4X Java on an exact released, verified JDK/Maven artifact, same READ_HEALTHY_DB1 independent wire oracle.
 - [ ] Add independent S7ANY address bounds and multi-PDU read/write scenarios; do not mislabel Python sequential API operations as one multi-item WRITE_VAR.
+
+### Current review: fifth independent PLC4X Java driver (PR #21)
+
+- [x] Real published Apache PLC4X 1.0.0 (Maven S7 driver JAR pinned SHA-256), Java21, actual DB1 REAL0 12.5/INT4 -123/REAL8 3.25 from classic COTP/S7Comm. Original Java exit0, one actual READ_VAR, zero WRITE_VAR.
+- [x] Strict original observer **red exit 1**: PLC4X sends 21 unframed zero bytes after valid framed COTP disconnect. SHA256 and original fail attached to [real #44045494434](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44045494434); see [full negative signature](PLC4X_JAVA_DISCONNECT.md).
+- [x] Separate exact-fingerprint known-unsafe characterization preserves this negative instead of suppressing it. This is **not** a green safety gate for PLC4X.
+- [ ] [PR #21](https://github.com/Missel2/s7-compatibility-lab/pull/21) (unmerged): add candidate status `KNOWN_UNSAFE` to five-client matrix with all other Java scenarios `NOT_TESTED`. Require successful exact-head CI and independent review.
+- [ ] Repeat close protocol test with different isolated S7 server implementation/minimal TCP peer to distinguish protocol-stack failure from fixture interaction, then propose upstream fix and red-on-current/green-on-candidate test.
