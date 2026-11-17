@@ -1,6 +1,6 @@
 # Apache PLC4X 1.0.0: real S7Comm read and malformed post-disconnect bytes
 
-**Status:** review-stage candidate, not a driver qualification, not a green end-to-end healthy connection. S7Comm only, GitHub-hosted 127.0.0.1 synthetic 2048-byte DB1, no industrial CPU.
+**Status:** version-specific negative evidence merged via PR #21; not a driver qualification, not a green end-to-end healthy connection. S7Comm only, GitHub-hosted 127.0.0.1 synthetic 2048-byte DB1, no industrial CPU.
 
 ## Actual independent read and transport
 
@@ -28,7 +28,7 @@ This proves a **version-/fixture-specific protocol-close defect signature**, not
 
 `scripts/characterize-plc4x-java-disconnect.cjs` is a **separate strict verification** against the *unaltered* original failing process report. It requires the real Java exit0 and exact readback, the original strict red exit1, pinned driver/JDK source, valid wire frame digest chain, the correctly framed disconnect, and the precise 21-zero-byte SHA256 anomaly. Any unrelated crash, changed fault signature, fixture failure, missing wire proof or changed version must fail the characterization workflow. The original safety contract is **never bypassed or reclassified as PASS**.
 
-The [PR #21](https://github.com/Missel2/s7-compatibility-lab/pull/21) remains unmerged until all required checks/reviews are resolved; the standalone characterization CI must independently prove this exact original negative result.
+[PR #21](https://github.com/Missel2/s7-compatibility-lab/pull/21) was squash-merged at `6792728b0987154cd27b03f71e69e31cf4dd7d79`. The original strict candidate failure and its exact-fingerprint characterization remain separately recorded.
 
 ## Follow-up work
 
@@ -36,3 +36,18 @@ The [PR #21](https://github.com/Missel2/s7-compatibility-lab/pull/21) remains un
 2. Investigate PLC4X 1.0.0 closing handshake/Netty buffer write path; reproduce in a minimal documented unit test before proposing an upstream fix. Do **not** modify or vendor published Apache driver code in the lab.
 3. Use an actually corrected published future PLC4X release against the same strict oracle; require red-on-current/green-on-fixed without suppressing old evidence.
 4. Add further Java data reads/writes, error injection, boundary tests **only after** platform/fixture compatibility and clear error classification, with the existing non-TPKT trailer kept as a separate failing lifecycle contract.
+
+## Falsification against a separate server implementation (PR #23)
+
+[Actual independent Java CI #44050053619](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44050053619) independently re-ran the unchanged `org.apache.plc4x:plc4j-driver-s7:1.0.0` Java client against **`fixtures/independent-cotp-s7-server.cjs`**, a new, deliberately tiny Node.js-only RFC1006/COTP/S7Comm fixture. Neither python-snap7 nor the earlier TCP proxy is in the experiment. The Node server independently produces CC, S7 setup, and the one genuine **12-byte, single-item S7ANY READ_VAR**, with exact DB1 raw response `41480000ff85060740500000`.
+
+Actual independent results were identical in both COTP close policies:
+
+| Second independent server behavior | Read | COTP DR | TCP trailer after DR | Outcome |
+| --- | --- | --- | --- | --- |
+| No explicit DC response | Correct 12 bytes | Seen | 21 unframed zero bytes | `KNOWN_UNSAFE` |
+| Valid explicit COTP DC response | Correct 12 bytes | Seen | 21 unframed zero bytes | `KNOWN_UNSAFE` |
+
+For each case, published Java exits 0, the strict read+close contract is considered **failed (original strict candidate exit1)**, and the actual payload digest is `c90232586b801f9558a76f2f963eccd831d9fe6775e4c8f1446b2331aa2132f2`. [Original raw Java process reports, actual COTP/S7 requests/responses and SHA evidence](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44050053619/artifacts/14313550909) retain the exact test-merge source SHA. Additional false-byte, unsupported WRITE_VAR, extra/fake-packet and TCP-fragmentation controls must fail. No new comparison-matrix PASS is generated: this tests a *second server*, not a sixth client or new S7Comm operation.
+
+**Interpretation:** a defect specific to the original Python Snap7 fixture or earlier Node relay is now much less plausible. A published PLC4X 1.0.0 teardown/serialization issue is supported for these software-only environments, but the actual root code defect, other PLC4X versions, and Siemens physical CPUs remain unverified. See [Issue #22](https://github.com/Missel2/s7-compatibility-lab/issues/22) and [PR #23](https://github.com/Missel2/s7-compatibility-lab/pull/23) (unmerged).
