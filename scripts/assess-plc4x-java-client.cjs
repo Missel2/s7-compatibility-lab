@@ -116,7 +116,9 @@ async function main(){
  const head=execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim();
  assert.match(head,sha);if(process.env.GITHUB_SHA)assert.equal(head,process.env.GITHUB_SHA);
  assert.equal(process.platform,"linux");assert.equal(process.arch,"x64");
- const major=Number(execFileSync("java",["-version"],{encoding:"utf8",stdio:["ignore","pipe","pipe"]}).match(/version "?(\d+)/)?.[1]||21);
+ const javacVersion=execFileSync("javac",["-version"],{encoding:"utf8"}).trim();
+ const major=Number(/^javac (\d+)/.exec(javacVersion)?.[1]);
+ assert.equal(major,21,"This evidence is only qualified for an actual Java 21 runtime");
  const c=javaClasspath();
  fs.mkdirSync(out,{recursive:true});fs.rmSync(originalPath,{force:true});
  const report={schemaVersion:1,sourceCommit:head,driver,driverJarSha256:c.driverJarSha256,
