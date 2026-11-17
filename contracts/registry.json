@@ -19,12 +19,13 @@
       "engine": "JS",
       "package": "node-red-contrib-s7 + nodes7",
       "version": "0.1.0-alpha.2",
-      "status": "HISTORICAL_ONLY",
+      "status": "MERGED_BASELINE_UNSAFE",
       "source_issue": "https://github.com/Missel2/nodes7/issues/38",
       "historical_evidence": "https://github.com/Missel2/node-red-contrib-s7/actions/runs/43869072608",
-      "lab_evidence": null,
+      "lab_evidence": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43959037772",
       "expected_safe_behavior": "All intended bytes are applied or the complete write is rejected without partial success.",
-      "candidate_qualified": false
+      "candidate_qualified": false,
+      "notes": "Exact source-packed @missel2 wrapper SHA256 316d6769431fffb805b07c825a5f474e875174843f4e8e6b6da9bffca02f2c24 and @missel2/nodes7@0.1.0-alpha.2 SRI verified. Original strict write assertion exited 1: DB1 readback [15,11,13] vs [15,29,43], one positive single-BYTE control and one real multi-item WRITE_VAR. The historical source lock names iso-on-tcp 0.1.0 but this independent modern npm consumer resolved 0.1.1 with documented SRI; full original runtime-tree identity is NOT proven. Never candidate-qualified. The independent alpha2 reproduction was squash-merged via lab PR #13 at bcf7a51de6a3b7bcd236531c5ddff29a93ae4c02."
     },
     {
       "id": "S7-ERR-002",

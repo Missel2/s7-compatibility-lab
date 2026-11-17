@@ -26,7 +26,7 @@ test('historical unsafe JS and newer published JS positive must not cancel each 
   const w=buildMatrix(baseline).rows.find(x=>x.id==='WRITE_THREE_DISJOINT_BYTES');
   assert.equal(w.comparable,true);
   assert.equal(w.cells.find(c=>c.candidate==='missel-js-alpha2').outcome,'KNOWN_UNSAFE');
-  assert.equal(w.cells.find(c=>c.candidate==='missel-js-alpha2').phase,'PR_OPEN');
+  assert.equal(w.cells.find(c=>c.candidate==='missel-js-alpha2').phase,'MERGED_BASELINE');
   assert.equal(w.cells.find(c=>c.candidate==='oriolrius-js-4_4_1').outcome,'SCOPED_PASS');
   assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').outcome,'NOT_TESTED');
   assert.equal(w.fullCoverage,false);

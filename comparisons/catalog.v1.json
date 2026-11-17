@@ -220,7 +220,7 @@
       "candidate": "missel-js-alpha2",
       "scenario": "WRITE_THREE_DISJOINT_BYTES",
       "outcome": "KNOWN_UNSAFE",
-      "phase": "PR_OPEN",
+      "phase": "MERGED_BASELINE",
       "evidence": {
         "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43959620837",
         "commit": "c962c3601d2c1923760acb50c1e4568ed2dac4bb",
@@ -228,8 +228,8 @@
         "assertion": "readback [15,11,13] vs [15,29,43], one WRITE_VAR, original candidate exit 1"
       },
       "limitations": [
-        "PR #13 unmerged on catalog main",
-        "iso-on-tcp 0.1.1 in modern consumer differs from historical source lock 0.1.0"
+        "iso-on-tcp 0.1.1 in modern consumer differs from historical source lock 0.1.0",
+        "Merged source PR #13; run itself was made before the merge and remains valid only for the pinned original candidate"
       ]
     },
     {
