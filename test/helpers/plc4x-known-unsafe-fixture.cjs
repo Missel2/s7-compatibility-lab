@@ -24,7 +24,8 @@ function fixture(){
   activeSessions:0,closedSessions:1,
   relayErrors:["Expected TPKT v3; actual leading bytes="+"00".repeat(21)],
   invalidTpkt:[{direction:"client-to-fixture",session:1,byteCount:21,allZero:true,
-   afterCotpDisconnect:true,sha256:sha(Buffer.alloc(21)),prefixHex:"00".repeat(21)}],
+   afterCotpDisconnect:true,sha256:sha(Buffer.alloc(21)),prefixHex:"00".repeat(21),
+   truncated:false,termination:"TCP_FIN"}],
   wireEvidence:{schemaVersion:1,scope:"SOFTWARE_LOOPBACK_ONLY",
    evidenceType:"COMPLETE_TPKT_FRAME_SHA256_NOT_RAW_PCAP",eventCount:14,
    chainSha256:"d".repeat(64),events:wireEvents}};
