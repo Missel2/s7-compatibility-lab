@@ -11,7 +11,7 @@ const {once}=require("node:events");
 const host="127.0.0.1";
 const digest=b=>crypto.createHash("sha256").update(b).digest("hex");
 const MAX_TPKT=4096,MAX_TRAILER=4096;
-const values=Buffer.alloc(2048);
+const values=Buffer.from(Array.from({length:2048},(_,i)=>i&0xff));
 values.writeFloatBE(12.5,0);
 values.writeInt16BE(-123,4);
 values.writeFloatBE(3.25,8);
@@ -64,9 +64,14 @@ function parseReadItems(frame){
   assert.equal(bitAddress%8,0,"Only byte-aligned DB1 data");
   const address=bitAddress/8;
   assert.ok([0,4,8].includes(address),"No requests outside three fixed synthetic values");
-  const size=address===4?2:4;
-  // Real and integer may be advertised as S7 ANY length 1 or byte count.
-  assert.ok([1,size].includes(frame.readUInt16BE(offset+4)),"Unexpected ANY element count");
+  const announced=frame.readUInt16BE(offset+4);
+  // Published PLC4X 1.0.0 coalesces REAL0, INT4 and REAL8 into one
+  // 12-byte S7ANY READ_VAR item (actual original request: 04 01 12 0a
+  // 10 02 00 0c 00 01 84 00 00 00). This is NOT three S7ANY items.
+  const singleContiguous=address===0&&announced===12&&frame[offset+3]===2;
+  const size=singleContiguous?12:(address===4?2:4);
+  assert.ok(singleContiguous||[1,size].includes(announced),"Unsupported ANY element count");
+  assert.equal(frame[offset+3],2,"Only byte-oriented, synthetic S7ANY reads permitted");
   items.push({address,size});
  }
  assert.equal(new Set(items.map(x=>x.address)).size,items.length,"Duplicate READ_VAR items");
