@@ -30,6 +30,12 @@ function specimen(){
    oracleId:'byte-write-1801-1803-1805-15-29-43-v1',
    classification:'COMPLETE_WRITE_OBSERVED',appliedBytes:3,externalVerified:true,readback:[15,29,43],
    observedWrites:1,originalStrictExit:0,reportSha256:hash},
+  jsAck:{schemaVersion:1,scope:'SOFTWARE_LOOPBACK_ONLY',sourceCommit:sha,
+   status:'NOT_QUALIFIED',candidatePass:false,fullCandidateQualification:false,
+   instrumentControlsValid:true,candidate:'@oriolrius/node-red-contrib-s7@4.4.1',
+   contract:'WRITE_ACK_LOST_AFTER_APPLY',classification:'NO_REPLAY_OBSERVED_OUTCOME_UNASSESSED',
+   originalExit:0,wireWrites:1,replayCount:0,fixtureApplied:true,externalVerified:true,
+   report:'published-js-lost-write-ack.json',reportSha256:hash},
   read:{sourceCommit:sha,scope:'SOFTWARE_LOOPBACK_ONLY',candidatePass:false,
    instrumentControlsValid:true,package:'@oriolrius/node-red-contrib-s7',version:'4.4.1',
    classification:'KNOWN_UNSAFE',
@@ -52,7 +58,9 @@ function mutated(fn){const d=specimen();fn(d);return d}
 test('actual same-run results only yield scoped per-scenario comparison with strict unsafe exits',()=>{
  const c=collate(specimen(),sha);
  assert.equal(c.sourceCommit,sha);
- assert.equal(c.cells.length,11);
+ assert.equal(c.cells.length,12);
+ assert.equal(c.cells.find(x=>x.candidate==='js'&&x.scenario==='WRITE_ACK_LOST_AFTER_APPLY')?.outcome,'NOT_OBSERVED_UNSAFE');
+ assert.equal(c.cells.find(x=>x.candidate==='rust'&&x.scenario==='WRITE_ACK_LOST_AFTER_APPLY')?.outcome,'KNOWN_UNSAFE');
  assert.equal(c.cells.filter(x=>x.outcome==='KNOWN_UNSAFE').length,4);
  assert.equal(c.cells.filter(x=>x.outcome==='SCOPED_PASS').length,5);
  assert.equal(c.globalRanking,null);
@@ -77,6 +85,16 @@ test('rejects fake or missing original strict candidate failures, same-run SHA o
   x=>x.rustWrite.candidatePass=true,
   x=>x.rustWrite.version='unreleased',
   x=>x.rustWrite.sourceCommit='c'.repeat(40),
+  x=>x.jsAck.instrumentControlsValid=false,
+  x=>x.jsAck.classification='COMPLETE_WRITE_OBSERVED',
+  x=>x.jsAck.originalExit=1,
+  x=>x.jsAck.wireWrites=2,
+  x=>x.jsAck.replayCount=1,
+  x=>x.jsAck.fixtureApplied=false,
+  x=>x.jsAck.externalVerified=false,
+  x=>x.jsAck.reportSha256='forged',
+  x=>x.jsAck.report='../traversal.json',
+  x=>x.jsAck.candidate='@missel2/node-red-contrib-s7@0.1.0-alpha.2',
   x=>x.read.results[0].classification='NO_INVALID_FRESH_OBSERVED',
   x=>x.read.results[0].strictCandidateExit=0,
   x=>x.read.results.push({...x.read.results[0]}),
@@ -101,7 +119,7 @@ test('false source HEAD, duplicate and invalid candidate identity fail closed',(
  assert.throws(()=>collate(mutated(x=>x.read.sourceCommit='c'.repeat(40)),sha));
 });
 
-test('direct raw evidence hashes bind all nine strict original candidate JSON files',()=>{
+test('direct raw evidence hashes bind all ten strict original candidate JSON files',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'s7-same-run-evidence-'));
  const d=specimen();
  const sha256=b=>crypto.createHash('sha256').update(b).digest('hex');
@@ -110,10 +128,33 @@ test('direct raw evidence hashes bind all nine strict original candidate JSON fi
   d.read.positiveControl={reportSha256:write('common-s7-compare.json')};
   d.write.reportSha256=write('published-js-three-byte-write.json');
   d.rustWrite.reportSha256=write('published-rust-three-byte-write.json');
+  const localRaw=Buffer.alloc(12);
+  localRaw.writeFloatBE(12.5,0);localRaw.writeInt16BE(-123,4);localRaw.writeFloatBE(-8.5,8);
+  const localAck={schemaVersion:1,scope:'SOFTWARE_LOOPBACK_ONLY',sourceCommit:sha,
+   candidate:'@oriolrius/node-red-contrib-s7@4.4.1',transport:'@oriolrius/nodes7@1.1.5',
+   packageVersion:'4.4.1',nodeRed:'5.0.9',fixture:'python-snap7@3.3.1 DB1 64 synthetic bytes',
+   hardware:'PENDING_HARDWARE',candidatePass:false,fullCandidateQualification:false,status:'passed',
+   classification:'NO_REPLAY_OBSERVED_OUTCOME_UNASSESSED',relayErrors:[],
+   scenarios:{acknowledged_write:{status:'passed',positiveReal8:19.75,wireWrites:1,readback:19.75},
+    lost_write_ack:{status:'passed',expectedValue:-8.5,observedWireWrites:1,duplicateWireWrites:0,
+     fixtureApplied:true,droppedAckCount:1,peerDroppedAckProof:{fixtureAcknowledged:true},
+     callbackErrors:['timeout'],observationMs:11050,externalVerified:true,
+     externalReadback:{schemaVersion:1,scope:'SOFTWARE_LOOPBACK_ONLY',reader:'python-snap7@3.3.1',
+      readonly:true,db:1,address:8,byteCount:12,expected:-8.5,observed:-8.5,
+      rawReal8Hex:localRaw.subarray(8).toString('hex'),
+      rawDb1Sha256:crypto.createHash('sha256').update(localRaw).digest('hex'),
+      unchanged:{REAL0:12.5,INT4:-123}},
+     wireEvidence:{eventCount:8,chainSha256:hash,events:[
+      {direction:'client_rx',frameSha256:hash},{direction:'fixture_ack_dropped',frameSha256:hash}
+     ]}
+   }}};
+  const ackBytes=Buffer.from(JSON.stringify(localAck));
+  fs.writeFileSync(path.join(dir,'published-js-lost-write-ack.json'),ackBytes);
+  d.jsAck.reportSha256=sha256(ackBytes);
   for(const r of d.read.results){r.report='published-js-malformed-read-js-'+r.fault+'.json';r.reportSha256=write(r.report)}
   const rustFiles=['malformed-read-rust-inconsistent_data_length.json','malformed-read-rust-wrong_pdu_reference.json','rust-s7-ci-parity.json'];
   d.rust.outputs.forEach((x,i)=>{x.report=rustFiles[i];x.reportSha256=write(x.report)});
-  assert.equal(Object.keys(verifyRawLinks(d,dir,sha)).length,9);
+  assert.equal(Object.keys(verifyRawLinks(d,dir,sha)).length,10);
   fs.writeFileSync(path.join(dir,'published-js-three-byte-write.json'),'{"sourceCommit":"'+sha+'","modified":true}');
   assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match/);
   d.write.reportSha256=sha256(fs.readFileSync(path.join(dir,'published-js-three-byte-write.json')));
