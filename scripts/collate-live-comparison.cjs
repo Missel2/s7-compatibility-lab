@@ -7,6 +7,7 @@ const path=require('node:path');
 const crypto=require('node:crypto');
 const assert=require('node:assert/strict');
 const {verifyAckLoss}=require('./assess-published-js-lost-write-ack.cjs');
+const {verifyKnownPlc4xAnomaly}=require('./characterize-plc4x-java-disconnect.cjs');
 const root=path.join(__dirname,'..');
 const SHA=/^[a-f0-9]{40}$/;
 const HEX=/^[a-f0-9]{64}$/;
@@ -14,8 +15,8 @@ const outcomes=new Set(['KNOWN_UNSAFE','SCOPED_PASS','NOT_OBSERVED_UNSAFE']);
 function digest(bytes){return crypto.createHash('sha256').update(bytes).digest('hex')}
 function collate(inputs, head) {
  assert.match(head,SHA);
- const {positive,python,write,rustWrite,jsAck,read,rust,lockBytes}=inputs;
- for(const [name,d] of Object.entries({positive,python,write,rustWrite,jsAck,read,rust})){
+ const {positive,python,java,write,rustWrite,jsAck,read,rust,lockBytes}=inputs;
+ for(const [name,d] of Object.entries({positive,python,java,write,rustWrite,jsAck,read,rust})){
   assert.ok(d && typeof d==='object' && !Array.isArray(d),name+' report must be actual JSON object');
   assert.equal(d.sourceCommit,head,name+' must come from the exact current CI source commit');
  }
@@ -43,6 +44,21 @@ function collate(inputs, head) {
  assert.ok(python.wireEvidence?.eventCount>=4);
  assert.match(python.wireEvidence.chainSha256,HEX);
  assert.match(python.originalSha256,HEX);
+ assert.equal(java.source,'REAL_RELEASED_PLC4X_CANDIDATE_AND_INDEPENDENT_WIRE_OBSERVER');
+ assert.equal(java.candidate,'apache-plc4x-java');
+ assert.equal(java.version,'1.0.0');
+ assert.equal(java.oracle,'READ_HEALTHY_DB1');
+ assert.equal(java.classification,'KNOWN_UNSAFE');
+ assert.equal(java.actualReadValuesCorrect,true,'The actual Java DB1 read is correct; the lifecycle is unsafe');
+ assert.equal(java.invalidTpktAfterDisconnect,true);
+ assert.equal(java.invalidTpktBytes,21);
+ assert.equal(java.invalidTpktSha256,'c90232586b801f9558a76f2f963eccd831d9fe6775e4c8f1446b2331aa2132f2');
+ assert.equal(java.originalJavaExit,0);
+ assert.equal(java.originalStrictAssessorExit,1,'Real Java strict observer must be red');
+ assert.equal(java.candidateQualified,false);
+ assert.equal(java.hardware,'PENDING_HARDWARE');
+ assert.match(java.originalReportSha256,HEX);
+ assert.match(java.originalAssessmentSha256,HEX);
  assert.equal(positive.status,'passed');
  assert.equal(positive.nodeRed,'5.0.9');
  assert.equal(positive.packageIds?.js,'4.4.1');
@@ -165,6 +181,7 @@ function collate(inputs, head) {
  }
  for(const x of ['js','rust'])add(x,'READ_HEALTHY_DB1','SCOPED_PASS','common-s7-compare.json');
  add('python','READ_HEALTHY_DB1','SCOPED_PASS','python-snap7-client-assessment.json');
+ add('java','READ_HEALTHY_DB1','KNOWN_UNSAFE','plc4x-java-unsafe-characterization.json');
  add('js','WRITE_THREE_DISJOINT_BYTES','SCOPED_PASS','published-js-three-byte-assessment.json');
  add('rust','WRITE_THREE_DISJOINT_BYTES','SCOPED_PASS','published-rust-three-byte-assessment.json');
  add('js','READ_IMPOSSIBLE_ACK_LENGTH','KNOWN_UNSAFE','published-js-read-characterization.json');
@@ -186,7 +203,8 @@ function collate(inputs, head) {
   fullCandidateQualification:false,globalRanking:null,
   packageLockSha256:digest(lockBytes),
   versions:{js:'@oriolrius/node-red-contrib-s7@4.4.1',jsTransport:'@oriolrius/nodes7@1.1.5',
-   rust:'node-red-contrib-s7-rust@1.4.0',python:'python-snap7==3.3.1',nodeRed:'5.0.9'},
+   rust:'node-red-contrib-s7-rust@1.4.0',python:'python-snap7==3.3.1',
+   java:'org.apache.plc4x:plc4j-driver-s7:1.0.0',nodeRed:'5.0.9'},
   strictCandidateFailuresPreserved:true,independentInstrumentControlsPassed:true,cells};
 }
 // Bind summaries to the actual original report bytes in THIS run. The original
@@ -203,6 +221,8 @@ function verifyRawLinks(inputs, reportDir, head){
  }
  add('common-s7-compare.json',inputs.read.positiveControl?.reportSha256);
  add('python-snap7-client-original.json',inputs.python.originalSha256);
+ add('plc4x-java-original.json',inputs.java.originalReportSha256);
+ add('plc4x-java-assessment.json',inputs.java.originalAssessmentSha256);
  add('published-js-three-byte-write.json',inputs.write.reportSha256);
  add('published-rust-three-byte-write.json',inputs.rustWrite.reportSha256);
  add('published-js-lost-write-ack.json',inputs.jsAck.reportSha256);
@@ -216,7 +236,7 @@ function verifyRawLinks(inputs, reportDir, head){
   assert.equal(r.report,rustMap[r.name],'Original Rust report misassociated with a behavior');
   add(r.report,r.reportSha256);
  }
- assert.equal(expected.size,11,'Exactly 11 actual positive/strict candidate report files required');
+ assert.equal(expected.size,13,'Exactly 13 original raw JS/Rust/Python/Java evidence files required');
  const result={};
  for(const [name,claimed] of expected){
   const raw=fs.readFileSync(path.join(reportDir,name));
@@ -233,6 +253,13 @@ function verifyRawLinks(inputs, reportDir, head){
   if(claimed!==null)assert.equal(claimed,actual,'Summary digest does not match original JSON bytes: '+name);
   result[name]=actual;
  }
+ // Verify all original Java wire bytes and the independent strict red original.
+ // A forged summary with a valid SHA of some other Java JSON must never qualify.
+ const originalJavaBytes=fs.readFileSync(path.join(reportDir,'plc4x-java-original.json'));
+ const assessmentBytes=fs.readFileSync(path.join(reportDir,'plc4x-java-assessment.json'));
+ const independent=verifyKnownPlc4xAnomaly(JSON.parse(assessmentBytes),originalJavaBytes,head);
+ independent.originalAssessmentSha256=digest(assessmentBytes);
+ assert.deepEqual(inputs.java,independent,'Java summary must exactly represent the actual original strict red and wire proof');
  return result;
 }
 
@@ -240,12 +267,17 @@ function main(){
  const head=process.env.GITHUB_SHA;
  assert.match(head||'',SHA,'GITHUB_SHA must pin an actual CI run');
  const dir=path.join(root,'test-reports');
- const names=['common-s7-compare.json','python-snap7-client-assessment.json','published-js-three-byte-assessment.json',
-  'published-rust-three-byte-assessment.json','published-js-lost-write-ack-assessment.json',
-  'published-js-read-characterization.json','rust-1.4.0-baseline-assessment.json'];
+ const names=['common-s7-compare.json','python-snap7-client-assessment.json','plc4x-java-unsafe-characterization.json',
+  'published-js-three-byte-assessment.json','published-rust-three-byte-assessment.json',
+  'published-js-lost-write-ack-assessment.json','published-js-read-characterization.json',
+  'rust-1.4.0-baseline-assessment.json'];
  const bytes=names.map(n=>fs.readFileSync(path.join(dir,n)));
- const inputs={positive:JSON.parse(bytes[0]),python:JSON.parse(bytes[1]),write:JSON.parse(bytes[2]),
-  rustWrite:JSON.parse(bytes[3]),jsAck:JSON.parse(bytes[4]),read:JSON.parse(bytes[5]),rust:JSON.parse(bytes[6]),
+ const reports=Object.fromEntries(names.map((n,i)=>[n,JSON.parse(bytes[i])]));
+ const inputs={positive:reports['common-s7-compare.json'],python:reports['python-snap7-client-assessment.json'],
+  java:reports['plc4x-java-unsafe-characterization.json'],
+  write:reports['published-js-three-byte-assessment.json'],rustWrite:reports['published-rust-three-byte-assessment.json'],
+  jsAck:reports['published-js-lost-write-ack-assessment.json'],read:reports['published-js-read-characterization.json'],
+  rust:reports['rust-1.4.0-baseline-assessment.json'],
   lockBytes:fs.readFileSync(path.join(root,'.candidate-consumer/package-lock.json'))};
  const result=collate(inputs,head);
  result.originalStrictReportHashes=verifyRawLinks(inputs,dir,head);

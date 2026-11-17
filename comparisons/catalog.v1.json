@@ -62,15 +62,24 @@
       ],
       "availability": "PUBLISHED_HASH_PINNED",
       "status": "NOT_QUALIFIED"
+    },
+    {
+      "id": "apache-plc4x-java-1_0_0",
+      "label": "Apache PLC4X Java S7 driver 1.0.0",
+      "ecosystem": "Apache PLC4X independent Java S7Comm client",
+      "package": "org.apache.plc4x:plc4j-driver-s7",
+      "version": "1.0.0",
+      "transport": "APACHE_PLC4X_JAVA_COTP_TCP",
+      "host": "Temurin Java 21",
+      "platform": "ubuntu-24.04/linux-x64",
+      "protocols": [
+        "S7COMM_CLASSIC"
+      ],
+      "availability": "PUBLISHED_MAVEN_JAR_SHA256_PINNED",
+      "status": "KNOWN_UNSAFE"
     }
   ],
   "prospects": [
-    {
-      "id": "apache-plc4x",
-      "label": "Apache PLC4X S7 driver",
-      "state": "NOT_ONBOARDED",
-      "required": "select exact released version, protocol capabilities and an independently installed client adapter"
-    },
     {
       "id": "snap7-native",
       "label": "Snap7 native client",
@@ -398,7 +407,7 @@
       "candidate": "python-snap7-3_3_1",
       "scenario": "READ_HEALTHY_DB1",
       "outcome": "SCOPED_PASS",
-      "phase": "PR_OPEN",
+      "phase": "MERGED_BASELINE",
       "evidence": {
         "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/44037883892",
         "commit": "256783506a7da2b7126083aeb06ca3220945aea3",
@@ -406,9 +415,26 @@
         "assertion": "Actual released Python client in separate process, one observed READ_VAR, 16 real TPKT frame observations, exact [12.5,-123,3.25] DB1 read, no WRITE_VAR, kernel-relay TCP disconnect, original SHA256 bound"
       },
       "limitations": [
-        "PR #19 is unmerged; this result is scoped to its exact earlier test-merge commit",
         "Test client and synthetic server run in distinct processes but use the same python-snap7 distribution; not an independent protocol stack on both ends",
-        "Not production/firmware/HIL qualification; only known DB1-read case on GitHub-hosted Linux x64"
+        "Not production/firmware/HIL qualification; only known DB1-read case on GitHub-hosted Linux x64",
+        "Original narrow real run was performed before PR #19 squash merge at 9f641e54404244f2ff8ab1286710aa5c0ebdcb09"
+      ]
+    },
+    {
+      "candidate": "apache-plc4x-java-1_0_0",
+      "scenario": "READ_HEALTHY_DB1",
+      "outcome": "KNOWN_UNSAFE",
+      "phase": "PR_OPEN",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/44045494434",
+        "commit": "3338d0ded4153cf65d4e1fbcaf214b0c7cf2580d",
+        "artifact": "plc4x-java-unsafe-characterization.json",
+        "assertion": "Real Apache PLC4X Java21 READ_VAR got 12.5/-123/3.25 and Java exit 0, but after real 11-byte COTP Disconnect Request sent 21 unframed zero bytes client-to-fixture; original strict assessor exit 1; exact SHA256 c90232586b801f9558a76f2f963eccd831d9fe6775e4c8f1446b2331aa2132f2"
+      },
+      "limitations": [
+        "PR #21 unmerged; exact original real release and fixture-specific known-unsafe characterization, not hardware qualification",
+        "DB1 values were correct, failure concerns non-TPKT bytes after valid COTP disconnect, not read payload correctness",
+        "One controller type and synthetic python-snap7 server; Siemens CPU behavior NOT proven"
       ]
     }
   ]

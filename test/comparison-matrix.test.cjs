@@ -7,15 +7,15 @@ const path=require('node:path');
 const {validateCatalog,buildMatrix,renderMarkdown}=require('../scripts/build-comparison-matrix.cjs');
 const baseline=JSON.parse(fs.readFileSync(path.join(__dirname,'../comparisons/catalog.v1.json'),'utf8'));
 const mutate=fn=>{const v=structuredClone(baseline);fn(v);return v;};
-test('four exact client identities, all evidence links and schema validate',()=>{
+test('five exact client identities, all evidence links and schema validate',()=>{
   assert.doesNotThrow(()=>validateCatalog(baseline));
   const m=buildMatrix(baseline);
-  assert.equal(m.candidateCount,4);
+  assert.equal(m.candidateCount,5);
   assert.equal(m.observationCount,baseline.observations.length);
   assert.equal(m.fullCandidateQualification,false);
   assert.equal(m.globalRanking,null);
   assert.equal(m.universalWinner,null);
-  assert.equal(m.observedOutcomes.KNOWN_UNSAFE,5);
+  assert.equal(m.observedOutcomes.KNOWN_UNSAFE,6);
   assert.ok(m.comparableScenarios.includes('WRITE_THREE_DISJOINT_BYTES'));
   assert.ok(m.comparableScenarios.includes('READ_WRONG_PDU_REFERENCE'));
   assert.ok(m.comparableScenarios.includes('READ_IMPOSSIBLE_ACK_LENGTH'));
@@ -24,6 +24,10 @@ test('four exact client identities, all evidence links and schema validate',()=>
   assert.equal(ack.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').outcome,'NOT_OBSERVED_UNSAFE');
   assert.equal(ack.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').phase,'MERGED_BASELINE');
   assert.equal(ack.cells.find(x=>x.candidate==='rust-1_4_0').outcome,'KNOWN_UNSAFE');
+  const javaRead=m.rows.find(x=>x.id==='READ_HEALTHY_DB1').cells.find(x=>x.candidate==='apache-plc4x-java-1_0_0');
+  assert.equal(javaRead.outcome,'KNOWN_UNSAFE');
+  assert.equal(javaRead.phase,'PR_OPEN');
+  assert.match(javaRead.evidence.assertion,/original strict assessor exit 1/);
   assert.equal(m.completeComparisonScenarios.length,0);
 });
 test('historical unsafe JS and newer published JS positive must not cancel each other',()=>{
@@ -43,7 +47,7 @@ test('real independent Python client gets exactly one scoped healthy READ_VAR ce
   const read=m.rows.find(x=>x.id==='READ_HEALTHY_DB1');
   const py=read.cells.find(c=>c.candidate==='python-snap7-3_3_1');
   assert.equal(py.outcome,'SCOPED_PASS');
-  assert.equal(py.phase,'PR_OPEN');
+  assert.equal(py.phase,'MERGED_BASELINE');
   assert.match(py.evidence.run,/44037883892$/);
   assert.match(py.evidence.assertion,/one observed READ_VAR/);
   assert.ok(py.limitations.some(x=>/same python-snap7 distribution/.test(x)));
@@ -68,6 +72,7 @@ test('no future/hardware/unimplemented case gains artificial PASS',()=>{
     assert.ok(s.cells.every(x=>x.outcome==='NOT_TESTED' && x.evidence===null),s.id);
   assert.ok(m.prospects.every(x=>!m.candidates.some(c=>c.id===x.id)));
   assert.ok(m.candidates.some(x=>x.id==='python-snap7-3_3_1'));
+  assert.ok(m.candidates.some(x=>x.id==='apache-plc4x-java-1_0_0'&&x.knownUnsafe===1));
 });
 test('rendered report is explicit evidence, not a single overall winner',()=>{
   const md=renderMarkdown(baseline,buildMatrix(baseline));

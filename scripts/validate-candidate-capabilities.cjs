@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const root = path.join(__dirname, "..");
 const STATES = new Set(["OBSERVED_SCOPED", "NOT_TESTED", "PENDING_HARDWARE"]);
-const MODES = new Set(["SEPARATE_CPYTHON_CLIENT_PROCESS", "SOURCE_PACKED_NODE_RED_PROCESS", "PUBLISHED_NODE_RED_PROCESS"]);
+const MODES = new Set(["SEPARATE_CPYTHON_CLIENT_PROCESS", "SEPARATE_JVM_CLIENT_PROCESS", "SOURCE_PACKED_NODE_RED_PROCESS", "PUBLISHED_NODE_RED_PROCESS"]);
 const SHA256 = /^python-snap7==3\.3\.1 --hash=sha256:[a-f0-9]{64}\s*$/;
 function validateCapabilities(manifest, catalog, pythonRequirements) {
   assert.equal(manifest.schemaVersion, 1);
@@ -40,9 +40,17 @@ function validateCapabilities(manifest, catalog, pythonRequirements) {
       assert.equal(c.releaseSource, "PYPI_WHEEL_SHA256_REQUIRE_HASHES");
       assert.equal(c.sourceProof, "requirements/python-snap7.txt");
       assert.match(pythonRequirements, SHA256, "Python candidate must remain pinned by exact wheel digest");
+    } else if (c.id === "apache-plc4x-java-1_0_0") {
+      assert.equal(c.execution, "SEPARATE_JVM_CLIENT_PROCESS");
+      assert.equal(c.releaseSource, "MAVEN_CENTRAL_JAR_SHA256_PINNED");
+      assert.equal(c.sourceProof, "java/plc4x-readonly-client/plc4j-driver-s7-1.0.0.sha256");
+      const sha = fs.readFileSync(path.join(root,c.sourceProof),"utf8");
+      assert.match(sha,/^907aa658a3040c86ff2fe7b94625d1537084ed3822dc4e9cd7f78dedc5ebe7d7  plc4j-driver-s7-1\.0\.0\.jar\s*$/,
+        "Real Apache 1.0.0 Maven driver must stay pinned to known reviewed SHA256");
+      assert.equal(exact.status,"KNOWN_UNSAFE","PLC4X 1.0.0 is not a release-safe candidate");
     } else {
-      assert.ok(c.execution !== "SEPARATE_CPYTHON_CLIENT_PROCESS",
-        "Cannot impersonate Python candidate adapter");
+      assert.ok(c.execution !== "SEPARATE_CPYTHON_CLIENT_PROCESS" && c.execution !== "SEPARATE_JVM_CLIENT_PROCESS",
+        "Cannot impersonate external Python/Java candidate");
       assert.ok(["SOURCE_PACK_SHA256_AND_PUBLISHED_NPM_SRI", "NPM_REGISTRY_SRI_RECORDED_IN_CI"].includes(c.releaseSource));
     }
     assert.ok(c.scenarios && typeof c.scenarios === "object" && !Array.isArray(c.scenarios));

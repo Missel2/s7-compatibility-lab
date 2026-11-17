@@ -11,13 +11,13 @@ const catalog=JSON.parse(fs.readFileSync(path.join(root,"comparisons/catalog.v1.
 const pinned=fs.readFileSync(path.join(root,"requirements/python-snap7.txt"),"utf8");
 const mutate=fn=>{const c=structuredClone(manifest);fn(c);return c;};
 
-test("four versioned exact client identities and all 56 scenario declarations are explicit",()=>{
+test("five versioned exact client identities and all 70 scenario declarations are explicit",()=>{
  const r=validateCapabilities(manifest,catalog,pinned);
- assert.equal(r.candidateCount,4);
- assert.equal(r.counts.total,56);
- assert.equal(r.counts.observed,14);
- assert.equal(r.counts.pendingHardware,4);
- assert.equal(r.counts.untested,38);
+ assert.equal(r.candidateCount,5);
+ assert.equal(r.counts.total,70);
+ assert.equal(r.counts.observed,15);
+ assert.equal(r.counts.pendingHardware,5);
+ assert.equal(r.counts.untested,50);
  assert.equal(r.globalRanking,null);
  assert.equal(r.fullCandidateQualification,false);
 });
@@ -25,10 +25,19 @@ test("Python is a real separate-process read candidate but not a three-item mult
  const r=validateCapabilities(manifest,catalog,pinned);
  const find=id=>r.rows.find(x=>x.candidate==="python-snap7-3_3_1"&&x.scenario===id);
  assert.equal(find("READ_HEALTHY_DB1").outcome,"SCOPED_PASS");
- assert.equal(find("READ_HEALTHY_DB1").phase,"PR_OPEN");
+ assert.equal(find("READ_HEALTHY_DB1").phase,"MERGED_BASELINE");
  assert.equal(find("WRITE_THREE_DISJOINT_BYTES").state,"NOT_TESTED");
  assert.equal(find("S7ANY_ADDRESS_24BIT_BOUND").state,"NOT_TESTED");
  assert.equal(find("HARDWARE_COVERAGE").state,"PENDING_HARDWARE");
+});
+test("Java is actually observed unsafe on teardown; every unexecuted function remains NOT_TESTED",()=>{
+ const r=validateCapabilities(manifest,catalog,pinned);
+ const cell=id=>r.rows.find(x=>x.candidate==="apache-plc4x-java-1_0_0"&&x.scenario===id);
+ assert.equal(cell("READ_HEALTHY_DB1").outcome,"KNOWN_UNSAFE");
+ assert.equal(cell("READ_HEALTHY_DB1").phase,"PR_OPEN");
+ assert.equal(cell("WRITE_THREE_DISJOINT_BYTES").state,"NOT_TESTED");
+ assert.equal(cell("S7ANY_ADDRESS_24BIT_BOUND").state,"NOT_TESTED");
+ assert.equal(cell("HARDWARE_COVERAGE").state,"PENDING_HARDWARE");
 });
 test("fake PASS, missing scenario, unsupported stack, wrong version, fabricated qualification or source are rejected",()=>{
  const edits=[
@@ -50,6 +59,10 @@ test("fake PASS, missing scenario, unsupported stack, wrong version, fabricated 
   m=>{delete m.candidates[2].scenarios.READ_SHORT_REPLY;},
   m=>{m.candidates[0].scenarios.FORGED_NEW_SCENARIO={state:"OBSERVED_SCOPED",reason:"Not actually executed"};},
   m=>{m.candidates[0].id="unregistered-driver";},
+  m=>{m.candidates[4].version="0.9.0";},
+  m=>{m.candidates[4].releaseSource="NPM_REGISTRY_SRI_RECORDED_IN_CI";},
+  m=>{m.candidates[4].execution="PUBLISHED_NODE_RED_PROCESS";},
+  m=>{m.candidates[4].scenarios.READ_HEALTHY_DB1.state="NOT_TESTED";},
  ];
  for(const fn of edits)assert.throws(()=>validateCapabilities(mutate(fn),catalog,pinned),String(fn));
 });

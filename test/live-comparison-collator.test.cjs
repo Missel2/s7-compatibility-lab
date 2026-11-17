@@ -7,6 +7,8 @@ const fs=require('node:fs');
 const os=require('node:os');
 const path=require('node:path');
 const crypto=require('node:crypto');
+const {fixture:javaKnownUnsafeFixture}=require('./helpers/plc4x-known-unsafe-fixture.cjs');
+const {verifyKnownPlc4xAnomaly}=require('../scripts/characterize-plc4x-java-disconnect.cjs');
 const sha='a'.repeat(40);
 const hash='b'.repeat(64);
 const packages=Object.fromEntries([
@@ -15,7 +17,15 @@ const packages=Object.fromEntries([
   ['@oriolrius/nodes7','1.1.5']
 ].map(([k,v])=>['node_modules/'+k,{version:v,integrity:'sha512-EXACTFIXTURE',resolved:'https://registry.npmjs.org/'+k}]));
 function specimen(){
- return {python:{sourceCommit:sha,schemaVersion:1,candidate:'python-snap7-client',
+ return {java:{schemaVersion:1,source:'REAL_RELEASED_PLC4X_CANDIDATE_AND_INDEPENDENT_WIRE_OBSERVER',
+    sourceCommit:sha,candidate:'apache-plc4x-java',version:'1.0.0',
+    classification:'KNOWN_UNSAFE',oracle:'READ_HEALTHY_DB1',
+    actualReadValuesCorrect:true,invalidTpktAfterDisconnect:true,
+    invalidTpktSha256:'c90232586b801f9558a76f2f963eccd831d9fe6775e4c8f1446b2331aa2132f2',
+    invalidTpktBytes:21,originalJavaExit:0,originalStrictAssessorExit:1,
+    originalReportSha256:hash,originalAssessmentSha256:hash,
+    candidateQualified:false,hardware:'PENDING_HARDWARE'},
+  python:{sourceCommit:sha,schemaVersion:1,candidate:'python-snap7-client',
    version:'3.3.1',scope:'SOFTWARE_LOOPBACK_ONLY',
    fixture:'snap7-3.3.1-DB1-2048',
    oracleId:'healthy-DB1-REAL0-INT4-REAL8-and-kernel-TCP-close-v1',
@@ -70,10 +80,11 @@ function mutated(fn){const d=specimen();fn(d);return d}
 test('actual same-run results only yield scoped per-scenario comparison with strict unsafe exits',()=>{
  const c=collate(specimen(),sha);
  assert.equal(c.sourceCommit,sha);
- assert.equal(c.cells.length,13);
+ assert.equal(c.cells.length,14);
+ assert.equal(c.cells.find(x=>x.candidate==='java'&&x.scenario==='READ_HEALTHY_DB1').outcome,'KNOWN_UNSAFE');
  assert.equal(c.cells.find(x=>x.candidate==='js'&&x.scenario==='WRITE_ACK_LOST_AFTER_APPLY')?.outcome,'NOT_OBSERVED_UNSAFE');
  assert.equal(c.cells.find(x=>x.candidate==='rust'&&x.scenario==='WRITE_ACK_LOST_AFTER_APPLY')?.outcome,'KNOWN_UNSAFE');
- assert.equal(c.cells.filter(x=>x.outcome==='KNOWN_UNSAFE').length,4);
+ assert.equal(c.cells.filter(x=>x.outcome==='KNOWN_UNSAFE').length,5);
  assert.equal(c.cells.filter(x=>x.outcome==='SCOPED_PASS').length,6);
  assert.equal(c.globalRanking,null);
  assert.equal(c.fullCandidateQualification,false);
@@ -82,6 +93,14 @@ test('actual same-run results only yield scoped per-scenario comparison with str
 });
 test('rejects fake or missing original strict candidate failures, same-run SHA or safety controls',()=>{
  const corrupt=[
+  x=>x.java.sourceCommit='c'.repeat(40),
+  x=>x.java.originalJavaExit=1,
+  x=>x.java.originalStrictAssessorExit=0,
+  x=>x.java.classification='SCOPED_PASS',
+  x=>x.java.candidateQualified=true,
+  x=>x.java.invalidTpktBytes=0,
+  x=>x.java.invalidTpktSha256='0'.repeat(64),
+  x=>x.java.originalAssessmentSha256='tampered',
   x=>x.python.sourceCommit='c'.repeat(40),
   x=>x.python.version='3.4.0',
   x=>x.python.instrumentControlsValid=false,
@@ -144,7 +163,7 @@ test('false source HEAD, duplicate and invalid candidate identity fail closed',(
  assert.throws(()=>collate(mutated(x=>x.read.sourceCommit='c'.repeat(40)),sha));
 });
 
-test('direct raw evidence hashes bind all eleven strict original candidate JSON files',()=>{
+test('direct raw evidence hashes bind all thirteen strict original candidate JSON files',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'s7-same-run-evidence-'));
  const d=specimen();
  const sha256=b=>crypto.createHash('sha256').update(b).digest('hex');
@@ -152,6 +171,13 @@ test('direct raw evidence hashes bind all eleven strict original candidate JSON 
  try {
   d.read.positiveControl={reportSha256:write('common-s7-compare.json')};
   d.python.originalSha256=write('python-snap7-client-original.json');
+  const {r:javaAssessment,bytes:javaOriginal}=javaKnownUnsafeFixture();
+  fs.writeFileSync(path.join(dir,'plc4x-java-original.json'),javaOriginal);
+  const ja=Buffer.from(JSON.stringify(javaAssessment)+'\n');
+  fs.writeFileSync(path.join(dir,'plc4x-java-assessment.json'),ja);
+  const j=verifyKnownPlc4xAnomaly(javaAssessment,javaOriginal,sha);
+  j.originalAssessmentSha256=sha256(ja);
+  d.java=j;
   d.write.reportSha256=write('published-js-three-byte-write.json');
   d.rustWrite.reportSha256=write('published-rust-three-byte-write.json');
   const localRaw=Buffer.alloc(12);
@@ -180,7 +206,13 @@ test('direct raw evidence hashes bind all eleven strict original candidate JSON 
   for(const r of d.read.results){r.report='published-js-malformed-read-js-'+r.fault+'.json';r.reportSha256=write(r.report)}
   const rustFiles=['malformed-read-rust-inconsistent_data_length.json','malformed-read-rust-wrong_pdu_reference.json','rust-s7-ci-parity.json'];
   d.rust.outputs.forEach((x,i)=>{x.report=rustFiles[i];x.reportSha256=write(x.report)});
-  assert.equal(Object.keys(verifyRawLinks(d,dir,sha)).length,11);
+  assert.equal(Object.keys(verifyRawLinks(d,dir,sha)).length,13);
+  fs.writeFileSync(path.join(dir,'plc4x-java-original.json'),'{"sourceCommit":"'+sha+'","fake":"modified original Java"}');
+  assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match/);
+  fs.writeFileSync(path.join(dir,'plc4x-java-original.json'),javaOriginal);
+  fs.writeFileSync(path.join(dir,'plc4x-java-assessment.json'),'{"sourceCommit":"'+sha+'","fake":"modified original Java assessor"}');
+  assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match/);
+  fs.writeFileSync(path.join(dir,'plc4x-java-assessment.json'),ja);
   fs.writeFileSync(path.join(dir,'python-snap7-client-original.json'),'\{"sourceCommit":"'+sha+'","mutated":"Python originally not this report"}');
   assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match/);
   d.python.originalSha256=sha256(fs.readFileSync(path.join(dir,'python-snap7-client-original.json')));

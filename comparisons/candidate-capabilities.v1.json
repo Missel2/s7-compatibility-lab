@@ -252,7 +252,7 @@
       "scenarios": {
         "READ_HEALTHY_DB1": {
           "state": "OBSERVED_SCOPED",
-          "reason": "Only outcome SCOPED_PASS at linked exact-head CI; PR_OPEN, never full candidate qualification"
+          "reason": "Only outcome SCOPED_PASS at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
         },
         "WRITE_THREE_DISJOINT_BYTES": {
           "state": "NOT_TESTED",
@@ -301,6 +301,82 @@
         "SUSTAINED_RECONNECT": {
           "state": "NOT_TESTED",
           "reason": "No actual released candidate run for this exact oracle"
+        },
+        "HARDWARE_COVERAGE": {
+          "state": "PENDING_HARDWARE",
+          "reason": "No separately authorized CPU/firmware test"
+        }
+      }
+    },
+    {
+      "id": "apache-plc4x-java-1_0_0",
+      "package": "org.apache.plc4x:plc4j-driver-s7",
+      "version": "1.0.0",
+      "transport": "APACHE_PLC4X_JAVA_COTP_TCP",
+      "runtime": "Temurin Java 21",
+      "platform": "ubuntu-24.04/linux-x64",
+      "protocols": [
+        "S7COMM_CLASSIC"
+      ],
+      "releaseSource": "MAVEN_CENTRAL_JAR_SHA256_PINNED",
+      "execution": "SEPARATE_JVM_CLIENT_PROCESS",
+      "sourceProof": "java/plc4x-readonly-client/plc4j-driver-s7-1.0.0.sha256",
+      "protocolCapabilities": {
+        "S7COMM_CLASSIC": "SCOPED_SOFTWARE_OBSERVATION",
+        "S7COMMPLUS": "NOT_TESTED_SEPARATE_PROTOCOL"
+      },
+      "scenarios": {
+        "READ_HEALTHY_DB1": {
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome KNOWN_UNSAFE at linked exact-head CI; PR_OPEN, original strict red1 for exact post-COTP zero-byte trailer, never full candidate qualification"
+        },
+        "WRITE_THREE_DISJOINT_BYTES": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
+        },
+        "READ_IMPOSSIBLE_ACK_LENGTH": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
+        },
+        "READ_WRONG_PDU_REFERENCE": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
+        },
+        "READ_SHORT_REPLY": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
+        },
+        "WRITE_ACK_LOST_AFTER_APPLY": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
+        },
+        "COTP_AFTER_EXPLICIT_UNLOAD": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
+        },
+        "S7ANY_ADDRESS_24BIT_BOUND": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
+        },
+        "WRITE_MULTI_PDU_SEGMENTATION": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
+        },
+        "READ_OVERLAP_SPLIT_PDU": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
+        },
+        "LATE_ECONNRESET": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
+        },
+        "CONCURRENT_READ_WRITE": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
+        },
+        "SUSTAINED_RECONNECT": {
+          "state": "NOT_TESTED",
+          "reason": "No actual released Apache PLC4X client run for this exact oracle"
         },
         "HARDWARE_COVERAGE": {
           "state": "PENDING_HARDWARE",

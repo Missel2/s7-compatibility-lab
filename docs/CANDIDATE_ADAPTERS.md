@@ -24,3 +24,7 @@ The fixture server and Python client **share python-snap7 3.3.1**, but execute i
 ## 4. Next independent language
 
 Onboard **Apache PLC4X Java** with its own verified release, JDK and license, real Java S7Comm process, the *same* pinned DB1 READ_VAR oracle and observer, and separate source-bound CI evidence. Then consider native Snap7, S7.NetPlus and Go. Avoid invented scores, global speed rankings and S7CommPlus claims without a protocol-appropriate fixture.
+
+## 5. Actual Apache PLC4X Java candidate with known-unsafe teardown
+
+A released **PLC4X Java 1.0.0** S7Comm driver has actually executed against the same synthetic DB1, with Java21, source-pinned published driver JAR SHA256, original process output, true COTP and one READ_VAR, no writes. DB1 reads and Java exit are correct. However the original strict read-and-clean-close contract **fails** due to actual 21 non-TPKT zero bytes after a valid COTP disconnect; the separate exact-fingerprint characterization is the only permitted green discovery job. In `comparisons/catalog.v1.json` the observed `READ_HEALTHY_DB1` cell is therefore **`KNOWN_UNSAFE`** (not `SCOPED_PASS`), and every other Java scenario is NOT_TESTED/PENDING_HARDWARE. See [negative evidence](PLC4X_JAVA_DISCONNECT.md) and [PR #21](https://github.com/Missel2/s7-compatibility-lab/pull/21). Do not convert an unsafe cleanup into a successful result because three read values happened to be correct.
