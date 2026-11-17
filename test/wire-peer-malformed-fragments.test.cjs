@@ -77,7 +77,10 @@ test("unsplit and 4+17 TCP events produce identical exact malformed trailer byte
   assert.ok(["TCP_FIN","TCP_CLOSE"].includes(r.anomalies[0].termination));
   assert.deepEqual(r.sent,cotpDisconnect,"never forward malformed tail to fixture");
  }
- assert.deepEqual(joined.anomalies,fragmented.anomalies);
+ const fingerprint=({direction,session,byteCount,allZero,afterCotpDisconnect,sha256,prefixHex,truncated})=>
+  ({direction,session,byteCount,allZero,afterCotpDisconnect,sha256,prefixHex,truncated});
+ assert.deepEqual(fingerprint(joined.anomalies[0]),fingerprint(fragmented.anomalies[0]),
+  "TCP_FIN vs TCP_CLOSE scheduling must not alter the protocol-byte fingerprint");
 });
 test("2+2+17 fragmented client trailer still has exact 21-byte SHA256",async()=>{
  const r=await exercise([zeros.subarray(0,2),zeros.subarray(2,4),zeros.subarray(4)]);
