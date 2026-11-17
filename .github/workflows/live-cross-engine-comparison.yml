@@ -24,6 +24,7 @@ jobs:
         run: |
           node --check scripts/collate-live-comparison.cjs
           node --check scripts/assess-published-rust-write.cjs
+          python -m py_compile scripts/s7_external_db1_readback.py
           node --check test/candidates/published-js-three-byte-write.cjs
           node --test test/live-comparison-collator.test.cjs test/published-js-write-assessor.test.cjs test/published-rust-write-assessor.test.cjs
       - name: Install exact published independent JS and real Rust NAPI under Node-RED
