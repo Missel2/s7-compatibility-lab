@@ -50,3 +50,7 @@ Published package integrity values are checked from the npm-installed lock, but 
 ### Phase 2: actual published JS/Rust comparison (in review)
 
 The second candidate CI workflow installs real published `@oriolrius/node-red-contrib-s7@4.4.1` and `node-red-contrib-s7-rust@1.4.0` under unmodified Node-RED `5.0.9`. Both must read the same synthetic DB1 values over the same real COTP/S7Comm fixture and demonstrate kernel-visible TCP client teardown. This **healthy-path only** result does not reverse Rust 1.4.0's independent known-unsafe lost-WRITE-ACK, wrong-PDU-ref and post-unload retries. npm integrity records are retained, but a fully committed transitive lock remains pending.
+
+### Current stacked work: actual Rust three-BYTE parity
+
+[PR #16](https://github.com/Missel2/s7-compatibility-lab/pull/16) extends the same-run PR #14 comparison with an **identical native Rust and JavaScript three-BYTE write oracle** and a separate Python S7Comm client that verifies actual DB1 contents (including untouched bytes). [First independent re-read CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856): each published candidate wrote `[15,29,43]` using one observed `WRITE_VAR`, then passed the separate-client DB1 witness. This is still a **stacked, unmerged PR** and only a scoped software loopback result.
