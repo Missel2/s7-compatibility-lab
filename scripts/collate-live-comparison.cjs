@@ -36,6 +36,7 @@ function collate(inputs, head) {
  assert.equal(write.version,'4.4.1');
  assert.equal(write.classification,'COMPLETE_WRITE_OBSERVED');
  assert.equal(write.appliedBytes,3);
+ assert.equal(write.externalVerified,true,'JS requires independent external DB1 readback');
  assert.deepEqual(write.readback,[15,29,43]);
  assert.equal(write.observedWrites,1);
  assert.match(write.reportSha256,HEX);
@@ -47,6 +48,7 @@ function collate(inputs, head) {
  assert.equal(rustWrite.oracleId,write.oracleId,'Must execute the exact same three-byte scenario oracle');
  assert.equal(rustWrite.classification,'COMPLETE_WRITE_OBSERVED');
  assert.equal(rustWrite.appliedBytes,3);
+ assert.equal(rustWrite.externalVerified,true,'Native Rust requires independent external DB1 readback');
  assert.deepEqual(rustWrite.readback,[15,29,43],'Native Rust must actually read back all three DB1 bytes');
  assert.ok(Number.isSafeInteger(rustWrite.observedWrites)&&rustWrite.observedWrites>=1);
  assert.equal(rustWrite.originalStrictExit,0,'Original native strict probe must really pass');
