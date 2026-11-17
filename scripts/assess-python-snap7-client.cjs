@@ -141,23 +141,49 @@ async function startFixture(python) {
     throw error;
   }
 }
+function inspectOriginalProcess({stdout, stderr, code, signal, timedOut=false, truncated=false}) {
+  assert.ok(Buffer.isBuffer(stdout) && Buffer.isBuffer(stderr), "Must preserve original process bytes");
+  assert.ok(code===null || (Number.isInteger(code) && code>=0 && code<=255));
+  assert.ok(signal===null || typeof signal==="string");
+  const originalStrictExit=code;
+  const originalSignal=signal;
+  const originalTimedOut=timedOut;
+  const originalStdoutSha256=sha256(stdout);
+  const originalStderrSha256=sha256(stderr);
+  const originalStderrTail=stderr.toString("utf8").slice(-2500);
+  const validSingleLine=stdout.length>0 && stdout.length<10000 &&
+    stdout.toString("utf8").trim().split(/\r?\n/).length===1;
+  const candidateProcessSucceeded=code===0 && signal===null && !timedOut && !truncated && validSingleLine;
+  return {originalStrictExit,originalSignal,originalTimedOut,originalTruncated:truncated,
+    originalStdoutSha256,originalStderrSha256,originalStderrTail,
+    candidateProcessSucceeded};
+}
 async function runOriginalClient(python, port, head) {
   const child = spawn(python, ["-u", "scripts/candidates/python-snap7-read.py", "--port", String(port)], {
     cwd: root, stdio: ["ignore", "pipe", "pipe"],
     env: {...process.env, S7_LAB_SOURCE_SHA: head},
   });
-  let stdout = "", stderr = "";
-  child.stdout.on("data", (b) => { stdout += String(b); });
-  child.stderr.on("data", (b) => { stderr += String(b); });
+  let stdout = Buffer.alloc(0), stderr = Buffer.alloc(0), truncated = false;
+  const append=(current, part)=>{
+    if(current.length+part.length>65536)truncated=true;
+    return Buffer.concat([current,part.subarray(0,Math.max(0,65536-current.length))]);
+  };
+  child.stdout.on("data", (part) => {stdout=append(stdout,part);});
+  child.stderr.on("data", (part) => {stderr=append(stderr,part);});
+  const closed=once(child,"close");
+  let code=null, signal=null, timedOut=false;
   try {
-    const [code, signal] = await bounded(once(child, "close"), 18000, "original Python client");
-    assert.equal(signal, null, "Real client terminated by signal");
-    assert.equal(code, 0, "Original Python client failed: " + stderr.slice(-2500));
-    assert.equal(stdout.trim().split(/\r?\n/).length, 1, "Expected exactly one original JSON message");
-    assert.ok(stdout.length < 10000, "Original report oversized");
-    return Buffer.from(stdout, "utf8");
+    try {
+      [code,signal]=await bounded(closed,18000,"original Python client");
+    } catch(error) {
+      if(!String(error.message).startsWith("HARNESS_TIMEOUT original Python client"))throw error;
+      timedOut=true;
+      child.kill("SIGKILL");
+      [code,signal]=await bounded(closed,4500,"killed Python client");
+    }
+    return {stdout,stderr,code,signal,timedOut,truncated};
   } finally {
-    if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    if(child.exitCode===null && child.signalCode===null)child.kill("SIGKILL");
   }
 }
 async function main() {
@@ -181,8 +207,21 @@ async function main() {
   try {
     fixture = await startFixture(python);
     peer = await createWirePeer(fixture.port);
-    original = await runOriginalClient(python, peer.port, head);
+    const processResult = await runOriginalClient(python, peer.port, head);
+    original = processResult.stdout;
+    // Persist actual stdout BEFORE any strict candidate exit or JSON assertion.
+    // A failing candidate is not equivalent to a failed fixture/observer.
     fs.writeFileSync(path.join(outputDir, originalFile), original);
+    Object.assign(report, inspectOriginalProcess(processResult));
+    report.originalSha256 = sha256(original);
+    report.originalReportPreserved = true;
+    if(!report.candidateProcessSucceeded) {
+      const candidateError = Error("Real Python client failed: exit=" + report.originalStrictExit +
+        " signal=" + report.originalSignal + " timedOut=" + report.originalTimedOut +
+        " stderr=" + report.originalStderrTail);
+      candidateError.candidateFailure=true;
+      throw candidateError;
+    }
     await poll(() => peer.active.size === 0 && peer.closed.length >= 1, 4500, "real TCP close");
     const orig = JSON.parse(original.toString("utf8"));
     Object.assign(report, {
@@ -202,8 +241,9 @@ async function main() {
       cleanClose: report.cleanClose, candidateQualified: false,
     }));
   } catch (error) {
-    report.classification = "INSTRUMENT_OR_CANDIDATE_FAILURE";
-    report.instrumentControlsValid = false;
+    report.classification = error.candidateFailure ? "CANDIDATE_FAILURE" : "INSTRUMENT_OR_CANDIDATE_FAILURE";
+    if(!error.candidateFailure) report.instrumentControlsValid = false;
+    report.errorOrigin = error.candidateFailure ? "PUBLISHED_CLIENT_PROCESS" : "HARNESS_OR_ASSESSOR";
     report.error = String(error?.stack || error).slice(0, 5000);
     console.error("PYTHON_SNAP7_EXTERNAL_CANDIDATE_RED " + report.error);
     process.exitCode = 1;
@@ -219,6 +259,7 @@ async function main() {
     if (report.peerCleanupError || report.fixtureCleanupError) {
       report.instrumentControlsValid = false;
       report.classification = "INSTRUMENT_OR_CANDIDATE_FAILURE";
+      report.errorOrigin = "HARNESS_TEARDOWN";
     }
     fs.writeFileSync(path.join(outputDir, summaryFile), JSON.stringify(report, null, 2) + "\n");
   }
@@ -227,4 +268,4 @@ if (require.main === module) main().catch((e) => {
   console.error("PYTHON_SNAP7_HARNESS_RED " + String(e.stack || e));
   process.exitCode = 1;
 });
-module.exports = {verifyPythonEvidence};
+module.exports = {verifyPythonEvidence,inspectOriginalProcess};
