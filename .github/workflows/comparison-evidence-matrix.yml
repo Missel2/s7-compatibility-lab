@@ -27,7 +27,7 @@ jobs:
           const fs=require('node:fs');
           const m=JSON.parse(fs.readFileSync('test-reports/comparison-matrix.v1.json'));
           if(m.fullCandidateQualification!==false||m.globalRanking!==null||
-             m.candidateCount!==4||m.observationCount<13||
+             m.candidateCount!==4||m.observationCount<14||
              m.comparableScenarios.length<3)
             throw Error('Invalid independent comparison and evidence scope');
           console.log('SCOPED_EVIDENCE_MATRIX_VALID=true');

@@ -15,9 +15,9 @@ test("four versioned exact client identities and all 56 scenario declarations ar
  const r=validateCapabilities(manifest,catalog,pinned);
  assert.equal(r.candidateCount,4);
  assert.equal(r.counts.total,56);
- assert.equal(r.counts.observed,13);
+ assert.equal(r.counts.observed,14);
  assert.equal(r.counts.pendingHardware,4);
- assert.equal(r.counts.untested,39);
+ assert.equal(r.counts.untested,38);
  assert.equal(r.globalRanking,null);
  assert.equal(r.fullCandidateQualification,false);
 });

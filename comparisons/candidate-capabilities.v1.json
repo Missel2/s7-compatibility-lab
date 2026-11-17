@@ -119,8 +119,8 @@
           "reason": "Only outcome NOT_OBSERVED_UNSAFE at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
         },
         "WRITE_ACK_LOST_AFTER_APPLY": {
-          "state": "NOT_TESTED",
-          "reason": "No actual released candidate run for this exact oracle"
+          "state": "OBSERVED_SCOPED",
+          "reason": "Only outcome NOT_OBSERVED_UNSAFE at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
         },
         "COTP_AFTER_EXPLICIT_UNLOAD": {
           "state": "NOT_TESTED",
@@ -180,7 +180,7 @@
         },
         "WRITE_THREE_DISJOINT_BYTES": {
           "state": "OBSERVED_SCOPED",
-          "reason": "Only outcome SCOPED_PASS at linked exact-head CI; PR_OPEN, never full candidate qualification"
+          "reason": "Only outcome SCOPED_PASS at linked exact-head CI; MERGED_BASELINE, never full candidate qualification"
         },
         "READ_IMPOSSIBLE_ACK_LENGTH": {
           "state": "OBSERVED_SCOPED",

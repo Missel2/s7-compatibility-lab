@@ -19,7 +19,11 @@ test('four exact client identities, all evidence links and schema validate',()=>
   assert.ok(m.comparableScenarios.includes('WRITE_THREE_DISJOINT_BYTES'));
   assert.ok(m.comparableScenarios.includes('READ_WRONG_PDU_REFERENCE'));
   assert.ok(m.comparableScenarios.includes('READ_IMPOSSIBLE_ACK_LENGTH'));
-  assert.ok(!m.comparableScenarios.includes('WRITE_ACK_LOST_AFTER_APPLY'));
+  assert.ok(m.comparableScenarios.includes('WRITE_ACK_LOST_AFTER_APPLY'));
+  const ack=m.rows.find(x=>x.id==='WRITE_ACK_LOST_AFTER_APPLY');
+  assert.equal(ack.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').outcome,'NOT_OBSERVED_UNSAFE');
+  assert.equal(ack.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').phase,'MERGED_BASELINE');
+  assert.equal(ack.cells.find(x=>x.candidate==='rust-1_4_0').outcome,'KNOWN_UNSAFE');
   assert.equal(m.completeComparisonScenarios.length,0);
 });
 test('historical unsafe JS and newer published JS positive must not cancel each other',()=>{
@@ -29,10 +33,10 @@ test('historical unsafe JS and newer published JS positive must not cancel each 
   assert.equal(w.cells.find(c=>c.candidate==='missel-js-alpha2').phase,'MERGED_BASELINE');
   assert.equal(w.cells.find(c=>c.candidate==='oriolrius-js-4_4_1').outcome,'SCOPED_PASS');
   assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').outcome,'SCOPED_PASS');
-  assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').phase,'PR_OPEN');
+  assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').phase,'MERGED_BASELINE');
   assert.equal(w.observedCandidates,3);
   assert.equal(w.allVersionsObserved,false,'Python client has not executed the one-user-command multi-WRITE_VAR oracle');
-  assert.equal(w.fullCoverage,false,'Open PR #16 is not merged full coverage');
+  assert.equal(w.fullCoverage,false,'Python has not executed this specific multi-item WRITE_VAR oracle');
 });
 test('real independent Python client gets exactly one scoped healthy READ_VAR cell, not an arbitrary PASS',()=>{
   const m=buildMatrix(baseline);
