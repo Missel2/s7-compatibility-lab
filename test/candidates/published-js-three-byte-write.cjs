@@ -16,10 +16,20 @@ const root = path.resolve(__dirname, "../..");
 const userDir = path.resolve(process.argv[2] || "/dev/null");
 const consumer = createRequire(path.join(userDir, "package.json"));
 const helper = consumer("node-red-node-test-helper");
-const output = path.join(root, "test-reports/published-js-three-byte-write.json");
+const selectedEngine = process.env.S7_WRITE_ENGINE || "js";
+assert.ok(["js", "rust"].includes(selectedEngine), "S7_WRITE_ENGINE must be js or rust");
+const oracleId = "byte-write-1801-1803-1805-15-29-43-v1";
+const output = path.join(
+  root,
+  selectedEngine === "rust"
+    ? "test-reports/published-rust-three-byte-write.json"
+    : "test-reports/published-js-three-byte-write.json",
+);
 const report = {
   status: "failed",
   schemaVersion: 1,
+  selectedEngine,
+  oracleId,
   hardware: "PENDING_HARDWARE",
   classification: "UNASSESSED_NOT_QUALIFIED",
   candidatePass: false,
@@ -356,7 +366,7 @@ async function main() {
     helper.init(consumer.resolve("node-red"));
     await bound(helper.startServer(), 15000, "Node-RED start");
     running = true;
-    for (const mode of ["js"]) {
+    for (const mode of [selectedEngine]) {
       report.results[mode] = {};
       await runOne(mode, peer.port, "multi_write_padding", writable, peer);
     }
@@ -395,7 +405,7 @@ async function main() {
     }
     fs.mkdirSync(path.dirname(output), { recursive: true });
     fs.writeFileSync(output, JSON.stringify(report, null, 2) + "\n");
-    console.log("S7_HISTORICAL_CROSS_ENGINE=" + report.status);
+    console.log("S7_SHARED_THREE_BYTE_ORACLE=" + selectedEngine + ":" + report.status);
     console.log("S7_HISTORICAL_RESULTS=" + JSON.stringify(report.results));
     if (report.fatal) console.error(report.fatal);
     if (report.status !== "passed") process.exitCode = 1;
