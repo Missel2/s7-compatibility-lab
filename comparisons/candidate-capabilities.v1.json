@@ -328,7 +328,7 @@
       "scenarios": {
         "READ_HEALTHY_DB1": {
           "state": "OBSERVED_SCOPED",
-          "reason": "Only outcome KNOWN_UNSAFE at linked exact-head CI; PR_OPEN, original strict red1 for exact post-COTP zero-byte trailer, never full candidate qualification"
+          "reason": "Only outcome KNOWN_UNSAFE at linked exact-head CI; MERGED_BASELINE, original strict red1 for exact post-COTP zero-byte trailer, never full candidate qualification"
         },
         "WRITE_THREE_DISJOINT_BYTES": {
           "state": "NOT_TESTED",
