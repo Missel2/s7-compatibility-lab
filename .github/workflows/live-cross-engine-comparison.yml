@@ -6,7 +6,7 @@ jobs:
   same-run-cross-engine:
     name: Exact-head JS/Rust real strict faults and common independent evidence
     runs-on: ubuntu-24.04
-    timeout-minutes: 24
+    timeout-minutes: 27
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -24,9 +24,12 @@ jobs:
         run: |
           node --check scripts/collate-live-comparison.cjs
           node --check scripts/assess-published-rust-write.cjs
+          node --check scripts/assess-published-js-lost-write-ack.cjs
+          node --check test/candidates/published-js-lost-write-ack.cjs
+          python -m py_compile scripts/s7_readonly_real8_witness.py
           python -m py_compile scripts/s7_external_db1_readback.py
           node --check test/candidates/published-js-three-byte-write.cjs
-          node --test test/live-comparison-collator.test.cjs test/published-js-write-assessor.test.cjs test/published-rust-write-assessor.test.cjs
+          node --test test/live-comparison-collator.test.cjs test/published-js-write-assessor.test.cjs test/published-rust-write-assessor.test.cjs test/published-js-lost-ack-assessor.test.cjs
       - name: Install exact published independent JS and real Rust NAPI under Node-RED
         shell: bash
         run: |
@@ -64,6 +67,9 @@ jobs:
       - name: Execute strict published JavaScript parser fault cases
         run: node scripts/assess-published-js-read.cjs
         timeout-minutes: 5
+      - name: Execute real JavaScript ACK lost after applied WRITE_VAR, independently read DB1
+        run: node scripts/assess-published-js-lost-write-ack.cjs
+        timeout-minutes: 4
       - name: Execute Rust 1.4.0 strict invalid length, reference, ACK and lifecycle
         run: node scripts/assess-rust-v1.4.0.cjs
         timeout-minutes: 9
