@@ -41,9 +41,9 @@ function specimen(){
    classification:'NOT_QUALIFIED',behavioralSafety:'KNOWN_UNSAFE',candidatePass:false,
    instrumentControlsValid:true,originalDefectsReproduced:true,
    outputs:[
-     {name:'correct_header_rejection',report:'rust-correct.json',outcome:'SAFE_ON_THIS_CASE',exitCode:0},
-     {name:'wrong_pdu_reference',report:'rust-wrong.json',outcome:'KNOWN_UNSAFE',exitCode:1},
-     {name:'lost_write_ack_and_teardown',report:'rust-faults.json',outcome:'KNOWN_UNSAFE',exitCode:1}
+     {name:'correct_header_rejection',report:'rust-correct.json',reportSha256:hash,outcome:'SAFE_ON_THIS_CASE',exitCode:0},
+     {name:'wrong_pdu_reference',report:'rust-wrong.json',reportSha256:hash,outcome:'KNOWN_UNSAFE',exitCode:1},
+     {name:'lost_write_ack_and_teardown',report:'rust-faults.json',reportSha256:hash,outcome:'KNOWN_UNSAFE',exitCode:1}
    ]},
   lockBytes:Buffer.from(JSON.stringify({packages}))
  };
@@ -83,6 +83,8 @@ test('rejects fake or missing original strict candidate failures, same-run SHA o
   x=>x.read.results.pop(),
   x=>x.rust.originalDefectsReproduced=false,
   x=>x.rust.outputs[1].exitCode=0,
+  x=>x.rust.outputs[1].reportSha256='0'.repeat(64),
+  x=>{delete x.rust.outputs[0].reportSha256},
   x=>x.rust.outputs[2].outcome='SAFE_ON_THIS_CASE',
   x=>x.rust.outputs[0].outcome='KNOWN_UNSAFE',
   x=>x.rust.instrumentControlsValid=false,
@@ -110,7 +112,7 @@ test('direct raw evidence hashes bind all nine strict original candidate JSON fi
   d.rustWrite.reportSha256=write('published-rust-three-byte-write.json');
   for(const r of d.read.results){r.report='published-js-malformed-read-js-'+r.fault+'.json';r.reportSha256=write(r.report)}
   const rustFiles=['malformed-read-rust-inconsistent_data_length.json','malformed-read-rust-wrong_pdu_reference.json','rust-s7-ci-parity.json'];
-  d.rust.outputs.forEach((x,i)=>{x.report=rustFiles[i];write(x.report)});
+  d.rust.outputs.forEach((x,i)=>{x.report=rustFiles[i];x.reportSha256=write(x.report)});
   assert.equal(Object.keys(verifyRawLinks(d,dir,sha)).length,9);
   fs.writeFileSync(path.join(dir,'published-js-three-byte-write.json'),'{"sourceCommit":"'+sha+'","modified":true}');
   assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match/);
@@ -118,6 +120,9 @@ test('direct raw evidence hashes bind all nine strict original candidate JSON fi
   fs.writeFileSync(path.join(dir,'published-rust-three-byte-write.json'),'{"sourceCommit":"'+sha+'","mutated":"wrong"}');
   assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match/);
   d.rustWrite.reportSha256=sha256(fs.readFileSync(path.join(dir,'published-rust-three-byte-write.json')));
+  fs.writeFileSync(path.join(dir,'malformed-read-rust-inconsistent_data_length.json'),'{}');
+  assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match original JSON bytes/);
+  d.rust.outputs[0].reportSha256=sha256(fs.readFileSync(path.join(dir,'malformed-read-rust-inconsistent_data_length.json')));
   fs.rmSync(path.join(dir,'malformed-read-rust-wrong_pdu_reference.json'));
   assert.throws(()=>verifyRawLinks(d,dir,sha),/ENOENT/);
  } finally {fs.rmSync(dir,{recursive:true,force:true})}
