@@ -42,10 +42,11 @@ async function session({mode="silence",parts=[],readFrame=read,writeAfter=false}
   await wait(()=>!socket.connecting,"TCP connect");
   socket.write(cr);
   await wait(()=>responses.length>=1,"COTP CC");
-  if(writeAfter===2){socket.write(readFrame);}
-  else {socket.write(setup);await wait(()=>responses.length>=2,"S7 setup ACK");socket.write(readFrame);}
+  socket.write(setup);
+  await wait(()=>responses.length>=2,"S7 setup ACK");
+  socket.write(readFrame);
   if(!writeAfter)await wait(()=>responses.length>=3,"S7 READ_VAR ACK");
-  if(writeAfter!==2){
+  if(!writeAfter){
    socket.write(dr);
    await delay(45);
    if(parts.length){
@@ -108,7 +109,7 @@ test("bad trailer byte does not inherit known-unsafe zero fingerprint",async()=>
 });
 test("unsupported S7 WRITE_VAR and wrong DB1 address never become successful observations",async()=>{
  const denied=job(5,Buffer.from([5,1,...any(8,4)]));
- const x=await session({readFrame:denied,writeAfter:2});
+ const x=await session({readFrame:denied,writeAfter:true});
  assert.equal(x.record.reads,0);
  assert.equal(x.record.writes,0);
  assert.ok(x.record.errors.some(e=>/READ_VAR only|WRITE_VAR/.test(e)));
