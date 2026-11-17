@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
-const {verifyPythonEvidence} = require("../scripts/assess-python-snap7-client.cjs");
+const {verifyPythonEvidence,inspectOriginalProcess} = require("../scripts/assess-python-snap7-client.cjs");
 const sha = "e".repeat(40);
 const rawHex = "41480000ff85060740500000";
 const hash = (v) => crypto.createHash("sha256").update(v).digest("hex");
@@ -109,4 +109,26 @@ test("original report must contain valid JSON in expected exact source format", 
   assert.throws(() => verifyPythonEvidence(s.report, sha, Buffer.from("{}")));
   assert.throws(() => verifyPythonEvidence(s.report, sha, Buffer.from("{bad")));
   assert.throws(() => verifyPythonEvidence(s.report, "wrong-head", s.bytes));
+});
+
+test("preserves actual failing client exit, raw stdout digest and stderr independently of fixture failure",()=>{
+  const stdout=Buffer.from('{"status":"candidate-failed"}\n'),stderr=Buffer.from("Traceback: DB1 read failed");
+  const result=inspectOriginalProcess({stdout,stderr,code:17,signal:null});
+  assert.equal(result.originalStrictExit,17);
+  assert.equal(result.originalSignal,null);
+  assert.equal(result.originalTimedOut,false);
+  assert.equal(result.originalStdoutSha256,hash(stdout));
+  assert.equal(result.originalStderrSha256,hash(stderr));
+  assert.match(result.originalStderrTail,/DB1 read failed/);
+  assert.equal(result.candidateProcessSucceeded,false);
+  const killed=inspectOriginalProcess({stdout:Buffer.from("partial"),stderr,code:null,signal:"SIGKILL",timedOut:true});
+  assert.equal(killed.originalTimedOut,true);
+  assert.equal(killed.originalSignal,"SIGKILL");
+  assert.equal(killed.originalStrictExit,null);
+  assert.equal(killed.candidateProcessSucceeded,false);
+  const invalid=inspectOriginalProcess({stdout:Buffer.from("garbage\nextra\n"),stderr:Buffer.alloc(0),code:0,signal:null});
+  assert.equal(invalid.candidateProcessSucceeded,false);
+  const valid=inspectOriginalProcess({stdout:Buffer.from('{"ok":true}\n'),stderr:Buffer.alloc(0),code:0,signal:null});
+  assert.equal(valid.candidateProcessSucceeded,true);
+  assert.equal(inspectOriginalProcess({stdout,stderr,code:0,signal:null,truncated:true}).candidateProcessSucceeded,false);
 });
