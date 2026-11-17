@@ -29,7 +29,8 @@ function validateCatalog(c) {
     for (const k of ['label','package','version','transport','host','platform','ecosystem','availability','status']) assert.ok(nonEmpty(x[k]),x.id+':'+k);
     assert.ok(platforms.has(x.platform),'Unsupported comparison platform');
     assert.ok(x.protocols?.includes('S7COMM_CLASSIC'),'Only actual classic S7 candidates supported in v1');
-    assert.equal(x.status,'KNOWN_UNSAFE','No promoted candidate status in v1');
+    assert.ok(['KNOWN_UNSAFE','NOT_QUALIFIED'].includes(x.status),
+      'No qualified or speculative-safe candidate status in catalog: '+x.id);
   }
   for (const x of c.prospects) {
     assert.match(x.id,ID);
@@ -56,6 +57,8 @@ function validateCatalog(c) {
     if(used.has(key))throw Error('Duplicate candidate-scenario observation: '+key);
     used.add(key);
     assert.ok(outcomes.has(o.outcome),'Unsupported outcome for '+key);
+    if(o.outcome==='KNOWN_UNSAFE')
+      assert.equal(x.status,'KNOWN_UNSAFE','A recorded unsafe candidate cannot erase its unsafe state: '+key);
     assert.ok(phases.has(o.phase),'Unsupported PR state for '+key);
     assert.ok(s.oracle!=='UNDEFINED','No observed result before a concrete oracle exists: '+key);
     assert.ok(x.protocols.includes(s.protocol),'Protocol mismatch: '+key);

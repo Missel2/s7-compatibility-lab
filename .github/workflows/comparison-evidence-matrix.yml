@@ -17,15 +17,17 @@ jobs:
       - name: Check syntax and exercise adversarial evidence-index assertions
         run: |
           node --check scripts/build-comparison-matrix.cjs
-          node --test test/comparison-matrix.test.cjs
+          node --check scripts/validate-candidate-capabilities.cjs
+          node --test test/comparison-matrix.test.cjs test/candidate-capabilities.test.cjs
       - name: Render machine-readable and Markdown candidate comparison
         run: |
           node scripts/build-comparison-matrix.cjs
+          node scripts/validate-candidate-capabilities.cjs
           node - <<'NODE'
           const fs=require('node:fs');
           const m=JSON.parse(fs.readFileSync('test-reports/comparison-matrix.v1.json'));
           if(m.fullCandidateQualification!==false||m.globalRanking!==null||
-             m.candidateCount!==3||m.observationCount<11||
+             m.candidateCount!==4||m.observationCount<14||
              m.comparableScenarios.length<3)
             throw Error('Invalid independent comparison and evidence scope');
           console.log('SCOPED_EVIDENCE_MATRIX_VALID=true');
@@ -38,5 +40,6 @@ jobs:
           path: |
             test-reports/comparison-matrix.v1.json
             test-reports/comparison-matrix.v1.md
+            test-reports/candidate-capability-matrix.v1.json
           if-no-files-found: warn
           retention-days: 14

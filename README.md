@@ -2,7 +2,7 @@
 
 Independent open-source verification laboratory for classic S7Comm and, later, S7CommPlus implementations. This project **is a test harness, not a PLC driver** and is **not a hardware qualification**.
 
-## Status (2026-11-16)
+## Status (2026-11-17)
 
 The independent software-only laboratory has already executed real S7Comm loopback comparisons against exact published JavaScript and Rust packages. The synthetic instrument, historical Rust known-unsafe characterization, released JavaScript AckData-length unsafe characterization, and 3-BYTE positive write are in merged CI. The historical `@missel2` alpha2 partial-write reproduction is **merged** via [PR #13](https://github.com/Missel2/s7-compatibility-lab/pull/13); it remains a confirmed unsafe historical candidate, never a release qualification. A green baseline-characterization workflow can prove an unsafe candidate behavior; it is **never** a candidate release PASS.
 
@@ -41,16 +41,24 @@ The Python probe **does not accept a target IP**. The synthetic server and TCP r
 
 This lab is GPL-3.0-or-later because the imported harness files originate from a GPL-3.0-or-later repository. See [NOTICE](NOTICE), [LICENSE](LICENSE), [PROVENANCE](docs/PROVENANCE.md) and [AGENTS.md](AGENTS.md). Published third-party S7 packages are **not vendored**. Changes are reviewed in GitHub PRs and are not merged or released automatically. Maintainers should preserve upstream authorship and direct contributions to appropriate upstream projects.
 
-## Phase 2: Rust 1.4.0 characterization (in review)
+## Phase 2: Rust 1.4.0 characterization (merged evidence)
 
 A separate GitHub workflow installs unmodified published `node-red-contrib-s7-rust@1.4.0` in Node-RED 5.0.9, then uses the same independent S7Comm relay to confirm a **correctly rejected invalid length** (positive safety control) and two **unsafe behaviors** (a bad 16-bit PDU reference accepted as fresh, and an applied write repeated after losing its ACK), plus attempts to reconnect after explicit flow removal. The purpose of a successful *baseline-characterization job* is **to prove that the target is unsafe**, not to qualify it. The machine-readable report must say `classification: NOT_QUALIFIED`, `behavioralSafety: KNOWN_UNSAFE` and `candidatePass: false`. Upstream-fix candidates will have separate genuinely failing-on-error release gates. See [issue #2](https://github.com/Missel2/s7-compatibility-lab/issues/2).
 
 Published package integrity values are checked from the npm-installed lock, but the transitive dependency lock is not yet committed; full immutable repeatability remains a next step. No S7CommPlus/HIL validation is claimed.
 
-### Phase 2: actual published JS/Rust comparison (in review)
+### Phase 2: actual published JS/Rust comparison (merged evidence)
 
 The second candidate CI workflow installs real published `@oriolrius/node-red-contrib-s7@4.4.1` and `node-red-contrib-s7-rust@1.4.0` under unmodified Node-RED `5.0.9`. Both must read the same synthetic DB1 values over the same real COTP/S7Comm fixture and demonstrate kernel-visible TCP client teardown. This **healthy-path only** result does not reverse Rust 1.4.0's independent known-unsafe lost-WRITE-ACK, wrong-PDU-ref and post-unload retries. npm integrity records are retained, but a fully committed transitive lock remains pending.
 
-### Current stacked work: actual Rust three-BYTE parity
+### Merged Rust three-BYTE parity
 
-[PR #16](https://github.com/Missel2/s7-compatibility-lab/pull/16) extends the same-run PR #14 comparison with an **identical native Rust and JavaScript three-BYTE write oracle** and a separate Python S7Comm client that verifies actual DB1 contents (including untouched bytes). [First independent re-read CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856): each published candidate wrote `[15,29,43]` using one observed `WRITE_VAR`, then passed the separate-client DB1 witness. This is still a **stacked, unmerged PR** and only a scoped software loopback result.
+[PR #16](https://github.com/Missel2/s7-compatibility-lab/pull/16) extends the same-run PR #14 comparison with an **identical native Rust and JavaScript three-BYTE write oracle** and a separate Python S7Comm client that verifies actual DB1 contents (including untouched bytes). [First independent re-read CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856): each published candidate wrote `[15,29,43]` using one observed `WRITE_VAR`, then passed the separate-client DB1 witness. PR #16 was merged; the result remains only a scoped software-loopback observation.
+
+## Independent Python S7Comm client (PR #19, unmerged)
+
+The first real external **non-Node-RED client** is pinned `python-snap7==3.3.1` in an isolated CPython 3.12 process. The client is read-only and cannot take a target host/IP. It reads the same known DB1 REAL0/INT4/REAL8 byte oracle as the released JS and Rust candidates. The independent TCP observer verifies actual COTP + S7Comm `READ_VAR`, no WRITE_VAR, exact byte hashes and a closed socket. [Real first run](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44037883892) and [same-head JS/Rust/Python run](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44038695742) are successful, but PR #19 remains unmerged.
+
+The new `comparisons/candidate-capabilities.v1.json` and `scripts/validate-candidate-capabilities.cjs` provide an exhaustive **four-candidate / fourteen-scenario** declaration with observed, untested and hardware states, not invented PASS claims. See [adapter admission contract](docs/CANDIDATE_ADAPTERS.md).
+
+**Important limit:** the fixture server and Python client run separately but use the same python-snap7 package release. This is a real client from a different application ecosystem than Node-RED, **not** a protocol-stack-independent Python server comparison or any Siemens firmware qualification.

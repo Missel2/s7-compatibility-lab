@@ -7,10 +7,10 @@ const path=require('node:path');
 const {validateCatalog,buildMatrix,renderMarkdown}=require('../scripts/build-comparison-matrix.cjs');
 const baseline=JSON.parse(fs.readFileSync(path.join(__dirname,'../comparisons/catalog.v1.json'),'utf8'));
 const mutate=fn=>{const v=structuredClone(baseline);fn(v);return v;};
-test('three actual version identities, all evidence links and schema validate',()=>{
+test('four exact client identities, all evidence links and schema validate',()=>{
   assert.doesNotThrow(()=>validateCatalog(baseline));
   const m=buildMatrix(baseline);
-  assert.equal(m.candidateCount,3);
+  assert.equal(m.candidateCount,4);
   assert.equal(m.observationCount,baseline.observations.length);
   assert.equal(m.fullCandidateQualification,false);
   assert.equal(m.globalRanking,null);
@@ -20,12 +20,11 @@ test('three actual version identities, all evidence links and schema validate',(
   assert.ok(m.comparableScenarios.includes('READ_WRONG_PDU_REFERENCE'));
   assert.ok(m.comparableScenarios.includes('READ_IMPOSSIBLE_ACK_LENGTH'));
   assert.ok(m.comparableScenarios.includes('WRITE_ACK_LOST_AFTER_APPLY'));
-  const a=m.rows.find(x=>x.id==='WRITE_ACK_LOST_AFTER_APPLY');
-  assert.equal(a.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').outcome,'NOT_OBSERVED_UNSAFE');
-  assert.equal(a.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').phase,'PR_OPEN');
-  assert.equal(a.cells.find(x=>x.candidate==='rust-1_4_0').outcome,'KNOWN_UNSAFE');
-  assert.deepEqual(m.completeComparisonScenarios,['WRITE_THREE_DISJOINT_BYTES'],
-    'Historical index covers three merged versions on this specific oracle, without implying same-run/hardware qualification');
+  const ack=m.rows.find(x=>x.id==='WRITE_ACK_LOST_AFTER_APPLY');
+  assert.equal(ack.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').outcome,'NOT_OBSERVED_UNSAFE');
+  assert.equal(ack.cells.find(x=>x.candidate==='oriolrius-js-4_4_1').phase,'MERGED_BASELINE');
+  assert.equal(ack.cells.find(x=>x.candidate==='rust-1_4_0').outcome,'KNOWN_UNSAFE');
+  assert.equal(m.completeComparisonScenarios.length,0);
 });
 test('historical unsafe JS and newer published JS positive must not cancel each other',()=>{
   const w=buildMatrix(baseline).rows.find(x=>x.id==='WRITE_THREE_DISJOINT_BYTES');
@@ -36,8 +35,22 @@ test('historical unsafe JS and newer published JS positive must not cancel each 
   assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').outcome,'SCOPED_PASS');
   assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').phase,'MERGED_BASELINE');
   assert.equal(w.observedCandidates,3);
-  assert.equal(w.allVersionsObserved,true);
-  assert.equal(w.fullCoverage,true,'PR #16 is now merged; all three historical version cells exist, not hardware qualified');
+  assert.equal(w.allVersionsObserved,false,'Python client has not executed the one-user-command multi-WRITE_VAR oracle');
+  assert.equal(w.fullCoverage,false,'Python has not executed this specific multi-item WRITE_VAR oracle');
+});
+test('real independent Python client gets exactly one scoped healthy READ_VAR cell, not an arbitrary PASS',()=>{
+  const m=buildMatrix(baseline);
+  const read=m.rows.find(x=>x.id==='READ_HEALTHY_DB1');
+  const py=read.cells.find(c=>c.candidate==='python-snap7-3_3_1');
+  assert.equal(py.outcome,'SCOPED_PASS');
+  assert.equal(py.phase,'PR_OPEN');
+  assert.match(py.evidence.run,/44037883892$/);
+  assert.match(py.evidence.assertion,/one observed READ_VAR/);
+  assert.ok(py.limitations.some(x=>/same python-snap7 distribution/.test(x)));
+  const write=m.rows.find(x=>x.id==='WRITE_THREE_DISJOINT_BYTES');
+  assert.equal(write.cells.find(c=>c.candidate==='python-snap7-3_3_1').outcome,'NOT_TESTED');
+  assert.equal(m.fullCandidateQualification,false);
+  assert.equal(m.globalRanking,null);
 });
 test('wrong PDU and impossible length show opposing version-specific behavior',()=>{
   const rows=buildMatrix(baseline).rows;
@@ -54,6 +67,7 @@ test('no future/hardware/unimplemented case gains artificial PASS',()=>{
   for(const s of m.rows.filter(x=>x.oracle==='UNDEFINED' && x.protocol!=='HARDWARE'))
     assert.ok(s.cells.every(x=>x.outcome==='NOT_TESTED' && x.evidence===null),s.id);
   assert.ok(m.prospects.every(x=>!m.candidates.some(c=>c.id===x.id)));
+  assert.ok(m.candidates.some(x=>x.id==='python-snap7-3_3_1'));
 });
 test('rendered report is explicit evidence, not a single overall winner',()=>{
   const md=renderMarkdown(baseline,buildMatrix(baseline));
@@ -77,6 +91,8 @@ test('fail closed on unknown outcomes, duplicate observations, misidentified can
     x=>x.observations[0].candidatePass=true,
     x=>{x.observations[0].phase='PR_OPEN';x.observations[0].limitations=[]},
     x=>x.candidates[0].version='',
+    x=>x.candidates[3].status='PRODUCTION_QUALIFIED',
+    x=>x.candidates[1].status='NOT_QUALIFIED',
     x=>x.scenarios[1].oracle='UNDEFINED',
     x=>x.candidates[0].platform='windows-unknown',
     x=>x.prospects[0].id='rust-1_4_0'

@@ -47,6 +47,21 @@
       ],
       "availability": "PUBLISHED",
       "status": "KNOWN_UNSAFE"
+    },
+    {
+      "id": "python-snap7-3_3_1",
+      "label": "Python python-snap7 client 3.3.1",
+      "ecosystem": "Python S7Comm client (without Node-RED)",
+      "package": "python-snap7",
+      "version": "3.3.1",
+      "transport": "PURE_PYTHON_S7COMM_CLIENT",
+      "host": "CPython 3.12",
+      "platform": "ubuntu-24.04/linux-x64",
+      "protocols": [
+        "S7COMM_CLASSIC"
+      ],
+      "availability": "PUBLISHED_HASH_PINNED",
+      "status": "NOT_QUALIFIED"
     }
   ],
   "prospects": [
@@ -55,12 +70,6 @@
       "label": "Apache PLC4X S7 driver",
       "state": "NOT_ONBOARDED",
       "required": "select exact released version, protocol capabilities and an independently installed client adapter"
-    },
-    {
-      "id": "python-snap7-client",
-      "label": "python-snap7 client",
-      "state": "NOT_ONBOARDED_AS_CANDIDATE",
-      "required": "separate client-adapter flow from the already installed synthetic python-snap7 server fixture"
     },
     {
       "id": "snap7-native",
@@ -372,7 +381,7 @@
       "candidate": "oriolrius-js-4_4_1",
       "scenario": "WRITE_ACK_LOST_AFTER_APPLY",
       "outcome": "NOT_OBSERVED_UNSAFE",
-      "phase": "PR_OPEN",
+      "phase": "MERGED_BASELINE",
       "evidence": {
         "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/44034745020",
         "commit": "906bb1e4af5229a69b7af1876708211fa32cd664",
@@ -380,9 +389,26 @@
         "assertion": "Fixture physically applied WRITE_VAR REAL8=-8.5, one positive ACK was withheld; Node-RED JS 4.4.1 emitted only one real write in 11-second observation, an error callback was observed, and separate read-only python-snap7 3.3.1 S7Comm DB1 client independently verified -8.5 and SHA-256 with unchanged REAL0/INT4"
       },
       "limitations": [
-        "PR #18 remains unmerged; the recorded observation is a prior real PR-test snapshot, not merged source",
         "No replay observed does not prove correct client-facing ambiguous-outcome reporting",
-        "Synthetic 127.0.0.1 DB1, 11-second JS observation; Rust previous failure had a different bounded timing window; no Siemens hardware testing"
+        "Synthetic 127.0.0.1 DB1, 11-second JS observation; Rust previous failure had a different bounded timing window; no Siemens hardware testing",
+        "Original exact-run before squash merge PR #18 at 71bee5652028202cd0960d495c4c7822b35b0fda; scoped result only"
+      ]
+    },
+    {
+      "candidate": "python-snap7-3_3_1",
+      "scenario": "READ_HEALTHY_DB1",
+      "outcome": "SCOPED_PASS",
+      "phase": "PR_OPEN",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/44037883892",
+        "commit": "256783506a7da2b7126083aeb06ca3220945aea3",
+        "artifact": "python-snap7-client-assessment.json",
+        "assertion": "Actual released Python client in separate process, one observed READ_VAR, 16 real TPKT frame observations, exact [12.5,-123,3.25] DB1 read, no WRITE_VAR, kernel-relay TCP disconnect, original SHA256 bound"
+      },
+      "limitations": [
+        "PR #19 is unmerged; this result is scoped to its exact earlier test-merge commit",
+        "Test client and synthetic server run in distinct processes but use the same python-snap7 distribution; not an independent protocol stack on both ends",
+        "Not production/firmware/HIL qualification; only known DB1-read case on GitHub-hosted Linux x64"
       ]
     }
   ]

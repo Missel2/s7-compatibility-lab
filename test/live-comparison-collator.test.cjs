@@ -15,7 +15,19 @@ const packages=Object.fromEntries([
   ['@oriolrius/nodes7','1.1.5']
 ].map(([k,v])=>['node_modules/'+k,{version:v,integrity:'sha512-EXACTFIXTURE',resolved:'https://registry.npmjs.org/'+k}]));
 function specimen(){
- return {positive:{sourceCommit:sha,schemaVersion:1,nodeRed:'5.0.9',status:'passed',
+ return {python:{sourceCommit:sha,schemaVersion:1,candidate:'python-snap7-client',
+   version:'3.3.1',scope:'SOFTWARE_LOOPBACK_ONLY',
+   fixture:'snap7-3.3.1-DB1-2048',
+   oracleId:'healthy-DB1-REAL0-INT4-REAL8-and-kernel-TCP-close-v1',
+   status:'NOT_QUALIFIED',classification:'SCOPED_PASS',candidateQualified:false,
+   instrumentControlsValid:true,originalStrictExit:0,cleanClose:true,
+   originalReport:'python-snap7-client-original.json',originalSha256:hash,
+   rawHex:'41480000ff85060740500000',
+   readback:{temperature:12.5,counter:-123,writable:3.25},
+   readRequests:1,writeRequests:0,cotpRequests:1,activeSessions:0,
+   closedSessions:1,relayErrors:[],
+   wireEvidence:{eventCount:16,chainSha256:hash}},
+  positive:{sourceCommit:sha,schemaVersion:1,nodeRed:'5.0.9',status:'passed',
    packageIds:{js:'4.4.1',rust:'1.4.0'},candidates:{
     js:{status:'passed',readVerified:true,closeVerified:true},
     rust:{status:'passed',readVerified:true,closeVerified:true}
@@ -58,11 +70,11 @@ function mutated(fn){const d=specimen();fn(d);return d}
 test('actual same-run results only yield scoped per-scenario comparison with strict unsafe exits',()=>{
  const c=collate(specimen(),sha);
  assert.equal(c.sourceCommit,sha);
- assert.equal(c.cells.length,12);
+ assert.equal(c.cells.length,13);
  assert.equal(c.cells.find(x=>x.candidate==='js'&&x.scenario==='WRITE_ACK_LOST_AFTER_APPLY')?.outcome,'NOT_OBSERVED_UNSAFE');
  assert.equal(c.cells.find(x=>x.candidate==='rust'&&x.scenario==='WRITE_ACK_LOST_AFTER_APPLY')?.outcome,'KNOWN_UNSAFE');
  assert.equal(c.cells.filter(x=>x.outcome==='KNOWN_UNSAFE').length,4);
- assert.equal(c.cells.filter(x=>x.outcome==='SCOPED_PASS').length,5);
+ assert.equal(c.cells.filter(x=>x.outcome==='SCOPED_PASS').length,6);
  assert.equal(c.globalRanking,null);
  assert.equal(c.fullCandidateQualification,false);
  assert.equal(c.strictCandidateFailuresPreserved,true);
@@ -70,6 +82,19 @@ test('actual same-run results only yield scoped per-scenario comparison with str
 });
 test('rejects fake or missing original strict candidate failures, same-run SHA or safety controls',()=>{
  const corrupt=[
+  x=>x.python.sourceCommit='c'.repeat(40),
+  x=>x.python.version='3.4.0',
+  x=>x.python.instrumentControlsValid=false,
+  x=>x.python.classification='QUALIFIED',
+  x=>x.python.candidateQualified=true,
+  x=>x.python.originalStrictExit=1,
+  x=>x.python.readRequests=0,
+  x=>x.python.writeRequests=1,
+  x=>x.python.activeSessions=1,
+  x=>x.python.cleanClose=false,
+  x=>x.python.rawHex='000000000000000000000000',
+  x=>x.python.wireEvidence.chainSha256='faked',
+  x=>x.python.originalSha256='not-sha256',
   x=>x.positive.sourceCommit='c'.repeat(40),
   x=>x.positive.candidates.js.closeVerified=false,
   x=>x.write.readback=[15,11,13],
@@ -119,13 +144,14 @@ test('false source HEAD, duplicate and invalid candidate identity fail closed',(
  assert.throws(()=>collate(mutated(x=>x.read.sourceCommit='c'.repeat(40)),sha));
 });
 
-test('direct raw evidence hashes bind all ten strict original candidate JSON files',()=>{
+test('direct raw evidence hashes bind all eleven strict original candidate JSON files',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'s7-same-run-evidence-'));
  const d=specimen();
  const sha256=b=>crypto.createHash('sha256').update(b).digest('hex');
  function write(name){const b=Buffer.from(JSON.stringify({sourceCommit:sha,actual:'real-original-test-report'}));fs.writeFileSync(path.join(dir,name),b);return sha256(b);}
  try {
   d.read.positiveControl={reportSha256:write('common-s7-compare.json')};
+  d.python.originalSha256=write('python-snap7-client-original.json');
   d.write.reportSha256=write('published-js-three-byte-write.json');
   d.rustWrite.reportSha256=write('published-rust-three-byte-write.json');
   const localRaw=Buffer.alloc(12);
@@ -154,7 +180,10 @@ test('direct raw evidence hashes bind all ten strict original candidate JSON fil
   for(const r of d.read.results){r.report='published-js-malformed-read-js-'+r.fault+'.json';r.reportSha256=write(r.report)}
   const rustFiles=['malformed-read-rust-inconsistent_data_length.json','malformed-read-rust-wrong_pdu_reference.json','rust-s7-ci-parity.json'];
   d.rust.outputs.forEach((x,i)=>{x.report=rustFiles[i];x.reportSha256=write(x.report)});
-  assert.equal(Object.keys(verifyRawLinks(d,dir,sha)).length,10);
+  assert.equal(Object.keys(verifyRawLinks(d,dir,sha)).length,11);
+  fs.writeFileSync(path.join(dir,'python-snap7-client-original.json'),'\{"sourceCommit":"'+sha+'","mutated":"Python originally not this report"}');
+  assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match/);
+  d.python.originalSha256=sha256(fs.readFileSync(path.join(dir,'python-snap7-client-original.json')));
   fs.writeFileSync(path.join(dir,'published-js-three-byte-write.json'),'{"sourceCommit":"'+sha+'","modified":true}');
   assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match/);
   d.write.reportSha256=sha256(fs.readFileSync(path.join(dir,'published-js-three-byte-write.json')));
