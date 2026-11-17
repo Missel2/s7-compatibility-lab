@@ -1,0 +1,49 @@
+name: Second independent Node RFC1006/S7Comm peer vs real PLC4X 1.0.0 (NOT qualification)
+on: [pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  independent-node-peer:
+    name: Exact-pinned real Java client against independent Node COTP and S7Comm server
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.4'
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # pinned v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Adversarial tests for independently implemented read-only S7Comm fixture
+        run: |
+          node --check fixtures/independent-cotp-s7-server.cjs
+          node --check scripts/assess-plc4x-independent-node-peer.cjs
+          node --test test/independent-cotp-s7-server.test.cjs test/wire-peer-malformed-fragments.test.cjs
+      - name: Build original PLC4X Maven client with exact released driver and reviewed artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -version
+          javac -version
+          cd java/plc4x-readonly-client
+          mvn --batch-mode --no-transfer-progress -DskipTests package dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+          test -s target/classes/org/rischlab/s7lab/Plc4xReadonlyS7Candidate.class
+          test -s target/classpath.txt
+          cd "$HOME/.m2/repository/org/apache/plc4x/plc4j-driver-s7/1.0.0"
+          sha256sum -c "$GITHUB_WORKSPACE/java/plc4x-readonly-client/plc4j-driver-s7-1.0.0.sha256"
+      - name: Run actual Java client against standalone Node S7Comm server without any Snap7 dependency
+        run: node scripts/assess-plc4x-independent-node-peer.cjs
+        timeout-minutes: 3
+      - name: Archive exact-head Java process and independent direct-wire evidence, including red runs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: independent-node-COTP-S7Comm-vs-published-PLC4X-1.0.0-NOT-QUALIFIED
+          path: |
+            test-reports/plc4x-node-peer-*.json
+          if-no-files-found: warn
+          retention-days: 14
