@@ -28,8 +28,11 @@ test('historical unsafe JS and newer published JS positive must not cancel each 
   assert.equal(w.cells.find(c=>c.candidate==='missel-js-alpha2').outcome,'KNOWN_UNSAFE');
   assert.equal(w.cells.find(c=>c.candidate==='missel-js-alpha2').phase,'PR_OPEN');
   assert.equal(w.cells.find(c=>c.candidate==='oriolrius-js-4_4_1').outcome,'SCOPED_PASS');
-  assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').outcome,'NOT_TESTED');
-  assert.equal(w.fullCoverage,false);
+  assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').outcome,'SCOPED_PASS');
+  assert.equal(w.cells.find(c=>c.candidate==='rust-1_4_0').phase,'PR_OPEN');
+  assert.equal(w.observedCandidates,3);
+  assert.equal(w.allVersionsObserved,true);
+  assert.equal(w.fullCoverage,false,'An observed but unmerged PR cannot be complete merged coverage');
 });
 test('wrong PDU and impossible length show opposing version-specific behavior',()=>{
   const rows=buildMatrix(baseline).rows;
