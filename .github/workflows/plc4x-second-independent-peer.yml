@@ -45,5 +45,6 @@ jobs:
           name: independent-node-COTP-S7Comm-vs-published-PLC4X-1.0.0-NOT-QUALIFIED
           path: |
             test-reports/plc4x-node-peer-*.json
+            test-reports/plc4x-node-peer-*.log
           if-no-files-found: warn
           retention-days: 14
