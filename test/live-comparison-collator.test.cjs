@@ -20,10 +20,16 @@ function specimen(){
     js:{status:'passed',readVerified:true,closeVerified:true},
     rust:{status:'passed',readVerified:true,closeVerified:true}
    }},
-  write:{sourceCommit:sha,status:'NOT_QUALIFIED',candidatePass:false,
+  write:{sourceCommit:sha,oracleId:'byte-write-1801-1803-1805-15-29-43-v1',
+   status:'NOT_QUALIFIED',candidatePass:false,
    instrumentControlsValid:true,package:'@oriolrius/node-red-contrib-s7',version:'4.4.1',
    classification:'COMPLETE_WRITE_OBSERVED',appliedBytes:3,readback:[15,29,43],observedWrites:1,
    reportSha256:hash},
+  rustWrite:{sourceCommit:sha,status:'NOT_QUALIFIED',candidatePass:false,
+   instrumentControlsValid:true,package:'node-red-contrib-s7-rust',version:'1.4.0',
+   oracleId:'byte-write-1801-1803-1805-15-29-43-v1',
+   classification:'COMPLETE_WRITE_OBSERVED',appliedBytes:3,readback:[15,29,43],
+   observedWrites:1,originalStrictExit:0,reportSha256:hash},
   read:{sourceCommit:sha,scope:'SOFTWARE_LOOPBACK_ONLY',candidatePass:false,
    instrumentControlsValid:true,package:'@oriolrius/node-red-contrib-s7',version:'4.4.1',
    classification:'KNOWN_UNSAFE',
@@ -46,9 +52,9 @@ function mutated(fn){const d=specimen();fn(d);return d}
 test('actual same-run results only yield scoped per-scenario comparison with strict unsafe exits',()=>{
  const c=collate(specimen(),sha);
  assert.equal(c.sourceCommit,sha);
- assert.equal(c.cells.length,10);
+ assert.equal(c.cells.length,11);
  assert.equal(c.cells.filter(x=>x.outcome==='KNOWN_UNSAFE').length,4);
- assert.equal(c.cells.filter(x=>x.outcome==='SCOPED_PASS').length,4);
+ assert.equal(c.cells.filter(x=>x.outcome==='SCOPED_PASS').length,5);
  assert.equal(c.globalRanking,null);
  assert.equal(c.fullCandidateQualification,false);
  assert.equal(c.strictCandidateFailuresPreserved,true);
@@ -61,6 +67,14 @@ test('rejects fake or missing original strict candidate failures, same-run SHA o
   x=>x.write.readback=[15,11,13],
   x=>x.write.appliedBytes=1,
   x=>x.write.candidatePass=true,
+  x=>x.write.oracleId='other-oracle',
+  x=>x.rustWrite.oracleId='other-oracle',
+  x=>x.rustWrite.readback=[15,11,13],
+  x=>x.rustWrite.observedWrites=0,
+  x=>x.rustWrite.originalStrictExit=1,
+  x=>x.rustWrite.candidatePass=true,
+  x=>x.rustWrite.version='unreleased',
+  x=>x.rustWrite.sourceCommit='c'.repeat(40),
   x=>x.read.results[0].classification='NO_INVALID_FRESH_OBSERVED',
   x=>x.read.results[0].strictCandidateExit=0,
   x=>x.read.results.push({...x.read.results[0]}),
@@ -83,7 +97,7 @@ test('false source HEAD, duplicate and invalid candidate identity fail closed',(
  assert.throws(()=>collate(mutated(x=>x.read.sourceCommit='c'.repeat(40)),sha));
 });
 
-test('direct raw evidence hashes bind all eight strict original candidate JSON files',()=>{
+test('direct raw evidence hashes bind all nine strict original candidate JSON files',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'s7-same-run-evidence-'));
  const d=specimen();
  const sha256=b=>crypto.createHash('sha256').update(b).digest('hex');
@@ -91,13 +105,17 @@ test('direct raw evidence hashes bind all eight strict original candidate JSON f
  try {
   d.read.positiveControl={reportSha256:write('common-s7-compare.json')};
   d.write.reportSha256=write('published-js-three-byte-write.json');
+  d.rustWrite.reportSha256=write('published-rust-three-byte-write.json');
   for(const r of d.read.results){r.report='published-js-malformed-read-js-'+r.fault+'.json';r.reportSha256=write(r.report)}
   const rustFiles=['malformed-read-rust-inconsistent_data_length.json','malformed-read-rust-wrong_pdu_reference.json','rust-s7-ci-parity.json'];
   d.rust.outputs.forEach((x,i)=>{x.report=rustFiles[i];write(x.report)});
-  assert.equal(Object.keys(verifyRawLinks(d,dir,sha)).length,8);
+  assert.equal(Object.keys(verifyRawLinks(d,dir,sha)).length,9);
   fs.writeFileSync(path.join(dir,'published-js-three-byte-write.json'),'{"sourceCommit":"'+sha+'","modified":true}');
   assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match/);
   d.write.reportSha256=sha256(fs.readFileSync(path.join(dir,'published-js-three-byte-write.json')));
+  fs.writeFileSync(path.join(dir,'published-rust-three-byte-write.json'),'{"sourceCommit":"'+sha+'","mutated":"wrong"}');
+  assert.throws(()=>verifyRawLinks(d,dir,sha),/Summary digest does not match/);
+  d.rustWrite.reportSha256=sha256(fs.readFileSync(path.join(dir,'published-rust-three-byte-write.json')));
   fs.rmSync(path.join(dir,'malformed-read-rust-wrong_pdu_reference.json'));
   assert.throws(()=>verifyRawLinks(d,dir,sha),/ENOENT/);
  } finally {fs.rmSync(dir,{recursive:true,force:true})}
