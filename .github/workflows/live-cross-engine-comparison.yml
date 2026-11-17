@@ -26,7 +26,12 @@ jobs:
           node --check scripts/assess-published-rust-write.cjs
           python -m py_compile scripts/s7_external_db1_readback.py
           node --check test/candidates/published-js-three-byte-write.cjs
-          node --test test/live-comparison-collator.test.cjs test/published-js-write-assessor.test.cjs test/published-rust-write-assessor.test.cjs
+          python -m py_compile scripts/candidates/python-snap7-read.py
+          node --check scripts/assess-python-snap7-client.cjs
+          node --test test/live-comparison-collator.test.cjs test/published-js-write-assessor.test.cjs test/published-rust-write-assessor.test.cjs test/python-snap7-client.test.cjs
+      - name: Independently run published Python 3.3.1 S7Comm READ_VAR with complete wire and teardown verification
+        run: node scripts/assess-python-snap7-client.cjs
+        timeout-minutes: 3
       - name: Install exact published independent JS and real Rust NAPI under Node-RED
         shell: bash
         run: |
