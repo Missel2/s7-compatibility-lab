@@ -43,6 +43,7 @@ function verifyPlc4xEvidence(report,head,raw) {
  assert.ok(report.closedSessions>=1);
  assert.equal(report.cleanClose,true);
  assert.deepEqual(report.relayErrors,[]);
+ assert.deepEqual(report.invalidTpkt,[],"Strict healthy oracle forbids any non-TPKT payload");
  const wire=report.wireEvidence;
  assert.equal(wire.scope,"SOFTWARE_LOOPBACK_ONLY");
  assert.equal(wire.evidenceType,"COMPLETE_TPKT_FRAME_SHA256_NOT_RAW_PCAP");
@@ -141,6 +142,7 @@ async function main(){
    readRequests:peer.reads.length,writeRequests:peer.writes.length,
    cotpRequests:peer.cotpRequests,closedSessions:peer.closed.length,
    activeSessions:peer.active.size,relayErrors:peer.errors.slice(),
+   invalidTpkt:peer.invalidTpkt.slice(),cotpDisconnectRequests:peer.cotpDisconnectRequests,
    wireEvidence:peer.getWireEvidence()});
   if(result.code!==0||result.signal||result.timedOut||result.truncated){
    report.classification="CANDIDATE_FAILURE_OR_FIXTURE_INCOMPATIBLE";
@@ -150,14 +152,23 @@ async function main(){
   }
   await poll(()=>peer.active.size===0&&peer.closed.length>=1,4000,"Java TCP close");
   report.closedSessions=peer.closed.length;report.activeSessions=peer.active.size;
-  report.cleanClose=true;report.instrumentControlsValid=true;report.classification="SCOPED_PASS";
+  report.cleanClose=peer.errors.length===0&&peer.invalidTpkt.length===0;
+  report.instrumentControlsValid=true;report.classification="SCOPED_PASS";
   verifyPlc4xEvidence(report,head,result.stdout);
   console.log("PLC4X_JAVA_REAL_CANDIDATE="+JSON.stringify({head,candidate:driver,
     oracle:oracleId,readRequests:report.readRequests,writeRequests:report.writeRequests,
     frames:report.wireEvidence.eventCount,driverJarSha256:c.driverJarSha256,
     candidateQualified:false,status:report.classification}));
  }catch(e){
-  if(report.classification==="UNASSESSED")report.classification="HARNESS_OR_ASSESSOR_FAILURE";
+  if(report.invalidTpkt?.length&&report.originalExit===0&&report.readRequests>=1&&report.writeRequests===0){
+   report.classification="CANDIDATE_POST_DISCONNECT_NON_TPKT_UNQUALIFIED";
+   report.errorOrigin="REAL_PLC4X_CLIENT_WIRE";
+   report.cleanClose=false;
+  }else if(report.classification==="SCOPED_PASS"||report.classification==="UNASSESSED"){
+   report.classification="HARNESS_OR_ASSESSOR_FAILURE";
+   report.instrumentControlsValid=false;
+  }
+  report.strictAssessorExit=1;
   report.error=String(e?.stack||e).slice(0,6000);process.exitCode=1;
   console.error("PLC4X_JAVA_REAL_CANDIDATE_RED "+report.error);
  }finally{
