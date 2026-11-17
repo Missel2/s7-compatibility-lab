@@ -36,6 +36,7 @@ test('no positive control, missing bytes, missing real wire, crash or wrong repo
  const baseline=specimen([15,11,13],1,'failed');
  const changes=[
   r=>r.results.js.multi_write_padding.positiveSingleByteWrite=false,
+  r=>r.results.js.multi_write_padding.cleanupError='Error: HARNESS_TIMEOUT unload js',
   r=>r.results.js.multi_write_padding.actualReadback=null,
   r=>r.results.js.multi_write_padding.wireEvidence=null,
   r=>r.results.js.multi_write_padding.error='HARNESS_TIMEOUT',
