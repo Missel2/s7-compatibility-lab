@@ -358,14 +358,14 @@
       "outcome": "SCOPED_PASS",
       "phase": "PR_OPEN",
       "evidence": {
-        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030185876",
-        "commit": "f0ba3f4027ee41db0b95b723c3cebbdbc0d3211a",
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/44030890856",
+        "commit": "b477b68164bc3c8dd1929d5dbd7f7da69c5efbf5",
         "artifact": "published-rust-three-byte-assessment.json",
-        "assertion": "Original native Rust process exit 0; one observed WRITE_VAR, actual DB1 readback [15,29,43], identical published JS oracle in the same CI job"
+        "assertion": "Original native process exit 0; one real WRITE_VAR; [15,29,43] observed by native driver AND a separate Python S7Comm client, neighboring DB1 bytes [10,12] unchanged; same-run published JS oracle"
       },
       "limitations": [
-        "Stacked PR #16 unmerged; generated CI commit represents PR16 tested against open PR14 branch",
-        "software-only localhost synthetic DB1; not hardware qualification"
+        "Stacked PR #16 unmerged; run snapshot is GitHub test-merge of PR16 against unmerged PR14",
+        "Only synthetic 127.0.0.1 S7Comm; no physical Siemens CPU/firmware qualification"
       ]
     }
   ]
