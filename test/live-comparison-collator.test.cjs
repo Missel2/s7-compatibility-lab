@@ -83,7 +83,7 @@ test('rejects fake or missing original strict candidate failures, same-run SHA o
   x=>x.read.results.pop(),
   x=>x.rust.originalDefectsReproduced=false,
   x=>x.rust.outputs[1].exitCode=0,
-  x=>x.rust.outputs[1].reportSha256='0'.repeat(64),
+  x=>x.rust.outputs[1].reportSha256='not-a-valid-sha256',
   x=>{delete x.rust.outputs[0].reportSha256},
   x=>x.rust.outputs[2].outcome='SAFE_ON_THIS_CASE',
   x=>x.rust.outputs[0].outcome='KNOWN_UNSAFE',
