@@ -98,7 +98,11 @@ function javaClasspath(){
  assert.ok(cp.split(path.delimiter).includes(driverJar),"Runtime classpath does not contain exact published S7 driver");
  const classes=path.join(javaProject,"target/classes");
  assert.ok(fs.existsSync(path.join(classes,"org/rischlab/s7lab/Plc4xReadonlyS7Candidate.class")),"Java source not compiled");
- return {cp:classes+path.delimiter+cp,driverJarSha256:sha256(fs.readFileSync(driverJar))};
+ const observedJarSha256=sha256(fs.readFileSync(driverJar));
+ const pinned=fs.readFileSync(path.join(javaProject,"plc4j-driver-s7-1.0.0.sha256"),"utf8").trim().split(/\s+/)[0];
+ assert.match(pinned,digest,"Only an exact SHA256 pinned published Maven release may be assessed");
+ assert.equal(observedJarSha256,pinned,"Upstream PLC4X Maven artifact does not match reviewed SHA256");
+ return {cp:classes+path.delimiter+cp,driverJarSha256:observedJarSha256};
 }
 async function runJava(cp,port,head){
  const child=spawn("java",["-Xms32m","-Xmx256m","-cp",cp,
