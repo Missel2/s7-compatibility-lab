@@ -13,8 +13,8 @@ const outcomes=new Set(['KNOWN_UNSAFE','SCOPED_PASS','NOT_OBSERVED_UNSAFE']);
 function digest(bytes){return crypto.createHash('sha256').update(bytes).digest('hex')}
 function collate(inputs, head) {
  assert.match(head,SHA);
- const {positive,write,read,rust,lockBytes}=inputs;
- for(const [name,d] of Object.entries({positive,write,read,rust})){
+ const {positive,write,rustWrite,read,rust,lockBytes}=inputs;
+ for(const [name,d] of Object.entries({positive,write,rustWrite,read,rust})){
   assert.ok(d && typeof d==='object' && !Array.isArray(d),name+' report must be actual JSON object');
   assert.equal(d.sourceCommit,head,name+' must come from the exact current CI source commit');
  }
@@ -31,6 +31,7 @@ function collate(inputs, head) {
  assert.equal(write.status,'NOT_QUALIFIED');
  assert.equal(write.candidatePass,false);
  assert.equal(write.instrumentControlsValid,true);
+ assert.equal(write.oracleId,'byte-write-1801-1803-1805-15-29-43-v1');
  assert.equal(write.package,'@oriolrius/node-red-contrib-s7');
  assert.equal(write.version,'4.4.1');
  assert.equal(write.classification,'COMPLETE_WRITE_OBSERVED');
@@ -38,6 +39,18 @@ function collate(inputs, head) {
  assert.deepEqual(write.readback,[15,29,43]);
  assert.equal(write.observedWrites,1);
  assert.match(write.reportSha256,HEX);
+ assert.equal(rustWrite.status,'NOT_QUALIFIED');
+ assert.equal(rustWrite.candidatePass,false);
+ assert.equal(rustWrite.instrumentControlsValid,true);
+ assert.equal(rustWrite.package,'node-red-contrib-s7-rust');
+ assert.equal(rustWrite.version,'1.4.0');
+ assert.equal(rustWrite.oracleId,write.oracleId,'Must execute the exact same three-byte scenario oracle');
+ assert.equal(rustWrite.classification,'COMPLETE_WRITE_OBSERVED');
+ assert.equal(rustWrite.appliedBytes,3);
+ assert.deepEqual(rustWrite.readback,[15,29,43],'Native Rust must actually read back all three DB1 bytes');
+ assert.ok(Number.isSafeInteger(rustWrite.observedWrites)&&rustWrite.observedWrites>=1);
+ assert.equal(rustWrite.originalStrictExit,0,'Original native strict probe must really pass');
+ assert.match(rustWrite.reportSha256,HEX);
  assert.equal(read.scope,'SOFTWARE_LOOPBACK_ONLY');
  assert.equal(read.candidatePass,false);
  assert.equal(read.instrumentControlsValid,true);
@@ -105,6 +118,7 @@ function collate(inputs, head) {
  }
  for(const x of ['js','rust'])add(x,'READ_HEALTHY_DB1','SCOPED_PASS','common-s7-compare.json');
  add('js','WRITE_THREE_DISJOINT_BYTES','SCOPED_PASS','published-js-three-byte-assessment.json');
+ add('rust','WRITE_THREE_DISJOINT_BYTES','SCOPED_PASS','published-rust-three-byte-assessment.json');
  add('js','READ_IMPOSSIBLE_ACK_LENGTH','KNOWN_UNSAFE','published-js-read-characterization.json');
  add('js','READ_WRONG_PDU_REFERENCE','NOT_OBSERVED_UNSAFE','published-js-read-characterization.json');
  add('js','READ_SHORT_REPLY','NOT_OBSERVED_UNSAFE','published-js-read-characterization.json');
@@ -140,6 +154,7 @@ function verifyRawLinks(inputs, reportDir, head){
  }
  add('common-s7-compare.json',inputs.read.positiveControl?.reportSha256);
  add('published-js-three-byte-write.json',inputs.write.reportSha256);
+ add('published-rust-three-byte-write.json',inputs.rustWrite.reportSha256);
  for(const r of inputs.read.results)add(r.report,r.reportSha256);
  const rustMap={
   correct_header_rejection:'malformed-read-rust-inconsistent_data_length.json',
@@ -150,7 +165,7 @@ function verifyRawLinks(inputs, reportDir, head){
   assert.equal(r.report,rustMap[r.name],'Original Rust report misassociated with a behavior');
   add(r.report);
  }
- assert.equal(expected.size,8,'Exactly 8 actual positive/strict candidate report files required');
+ assert.equal(expected.size,9,'Exactly 9 actual positive/strict candidate report files required');
  const result={};
  for(const [name,claimed] of expected){
   const raw=fs.readFileSync(path.join(reportDir,name));
@@ -169,10 +184,12 @@ function main(){
  assert.match(head||'',SHA,'GITHUB_SHA must pin an actual CI run');
  const dir=path.join(root,'test-reports');
  const names=['common-s7-compare.json','published-js-three-byte-assessment.json',
-  'published-js-read-characterization.json','rust-1.4.0-baseline-assessment.json'];
+  'published-rust-three-byte-assessment.json','published-js-read-characterization.json',
+  'rust-1.4.0-baseline-assessment.json'];
  const bytes=names.map(n=>fs.readFileSync(path.join(dir,n)));
- const inputs={positive:JSON.parse(bytes[0]),write:JSON.parse(bytes[1]),read:JSON.parse(bytes[2]),
-  rust:JSON.parse(bytes[3]),lockBytes:fs.readFileSync(path.join(root,'.candidate-consumer/package-lock.json'))};
+ const inputs={positive:JSON.parse(bytes[0]),write:JSON.parse(bytes[1]),rustWrite:JSON.parse(bytes[2]),
+  read:JSON.parse(bytes[3]),rust:JSON.parse(bytes[4]),
+  lockBytes:fs.readFileSync(path.join(root,'.candidate-consumer/package-lock.json'))};
  const result=collate(inputs,head);
  result.originalStrictReportHashes=verifyRawLinks(inputs,dir,head);
  result.inputReports=Object.fromEntries(names.map((n,i)=>[n,digest(bytes[i])]));
