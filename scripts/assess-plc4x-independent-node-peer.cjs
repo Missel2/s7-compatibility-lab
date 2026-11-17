@@ -155,6 +155,7 @@ async function one(mode,head,classpath,serverSourceSha256){
   const result=await runJava(classpath.cp,server.port,head);
   const original=result.stdout;
   fs.writeFileSync(path.join(outputDir,originalFile),original);
+  fs.writeFileSync(path.join(outputDir,"plc4x-node-peer-"+mode+"-stderr.log"),result.stderr);
   Object.assign(report,{originalJavaExit:result.code,originalSignal:result.signal,
    originalTimedOut:result.timedOut,originalTruncated:result.truncated,
    originalSha256:digest(original),originalStderrSha256:digest(result.stderr),
