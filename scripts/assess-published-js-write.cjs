@@ -12,8 +12,11 @@ const OUT=path.join(root,'test-reports/published-js-three-byte-assessment.json')
 const SHA=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
 const intended=[15,29,43];
 const offsets=[1801,1803,1805];
-function verifyWrite(report,commit){
+function verifyWrite(report,commit,engine='js'){
  assert.equal(report.schemaVersion,1);
+ assert.ok(['js','rust'].includes(engine));
+ assert.equal(report.selectedEngine,engine);
+ assert.equal(report.oracleId,'byte-write-1801-1803-1805-15-29-43-v1');
  assert.equal(report.sourceCommit,commit);
  assert.equal(report.jsVersion,'4.4.1');
  assert.equal(report.nodeRed,'5.0.9');
@@ -24,10 +27,10 @@ function verifyWrite(report,commit){
  for(const field of ['fatal','stopError','proxyError','fixtureError'])
    assert.equal(report[field],undefined,field+' indicates harness failure');
  assert.deepEqual(report.relayErrors,[]);
- const check=report.results?.js?.multi_write_padding;
+ const check=report.results?.[engine]?.multi_write_padding;
  assert.ok(check,'Missing real JS write result');
  assert.equal(check.case,'multi_write_padding');
- assert.equal(check.node,'js');
+ assert.equal(check.node,engine);
  assert.equal(check.positiveSingleByteWrite,true);
  assert.equal(check.positiveSingleWriteRequests,1);
  assert.deepEqual(check.expectedBytes,intended);
@@ -69,6 +72,7 @@ function main(){
  const summary={schemaVersion:1,sourceCommit:commit,scope:'SOFTWARE_LOOPBACK_ONLY',
   package:'@oriolrius/node-red-contrib-s7',version:'4.4.1',
   historicalAlpha:'@missel2/node-red-contrib-s7@0.1.0-alpha.2',
+  oracleId:'byte-write-1801-1803-1805-15-29-43-v1',
   status:'NOT_QUALIFIED',candidatePass:false,fullCandidateQualification:false};
  try{
   const proc=spawnSync(process.execPath,['test/candidates/published-js-three-byte-write.cjs',path.join(root,'.candidate-consumer')],{
