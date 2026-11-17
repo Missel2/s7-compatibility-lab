@@ -81,6 +81,19 @@ test("standalone peer implements COTP CC, S7 setup, exact 3-item synthetic DB1 R
  assert.equal(x.record.closed,true);
  assert.ok(x.record.events.length>=7);
 });
+test("real published PLC4X one-item contiguous DB1[0:12] request returns all exact raw bytes",async()=>{
+ // Captured from actual PLC4X 1.0.0 Java process in CI #44049739091.
+ const coalesced=Buffer.from("0300001f02f08032010000000b000e00000401120a1002000c000184000000","hex");
+ const x=await session({readFrame:coalesced});
+ const ack=x.frames[2];
+ assert.equal(ack[19],4);
+ assert.equal(ack[20],1);
+ assert.equal(ack.subarray(21,25).toString("hex"),"ff040060");
+ assert.equal(ack.subarray(25).toString("hex"),"41480000ff85060740500000");
+ assert.equal(x.record.reads,1);
+ assert.equal(x.record.writes,0);
+ assert.equal(x.record.errors.length,0);
+});
 test("independent second server observes all 21 malformed bytes, not just the first TCP event",async()=>{
  const joined=await session({parts:[zero]});
  const split=await session({parts:[zero.subarray(0,4),zero.subarray(4)]});
