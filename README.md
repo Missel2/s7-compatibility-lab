@@ -2,11 +2,22 @@
 
 Independent open-source verification laboratory for classic S7Comm and, later, S7CommPlus implementations. This project **is a test harness, not a PLC driver** and is **not a hardware qualification**.
 
-## Status
+## Status (2026-11-16)
 
-**Phase 1: standalone harness bootstrap** (2026-11-16). The first automated job proves that an independent observation proxy sees real TCP/COTP/S7Comm traffic to a disposable `python-snap7==3.3.1` software server and that a synthetic DB1 read, write and readback work. It does **not** yet run cross-engine JavaScript/Rust comparisons. Those adapters are the next phase.
+The independent software-only laboratory has already executed real S7Comm loopback comparisons against exact published JavaScript and Rust packages. The synthetic instrument, historical Rust known-unsafe characterization, released JavaScript AckData-length unsafe characterization, and 3-BYTE positive write are in merged CI. The historical `@missel2` alpha2 partial-write reproduction is **merged** via [PR #13](https://github.com/Missel2/s7-compatibility-lab/pull/13); it remains a confirmed unsafe historical candidate, never a release qualification. A green baseline-characterization workflow can prove an unsafe candidate behavior; it is **never** a candidate release PASS.
 
-See [current evidence](docs/CURRENT_EVIDENCE.md), [architecture](docs/ARCHITECTURE.md), [roadmap](docs/ROADMAP.md) and [source provenance](docs/PROVENANCE.md).
+The new [comparison architecture](docs/COMPARISON_ARCHITECTURE.md) builds a machine-readable `comparisons/catalog.v1.json` index of **specific versioned CI observations**. It lists untested and future candidates separately. It does not run the candidates anew, infer missing results, produce a global leaderboard, or substitute for production/HIL qualification.
+
+See [current evidence](docs/CURRENT_EVIDENCE.md), [architecture](docs/ARCHITECTURE.md), [roadmap](docs/ROADMAP.md), [comparison architecture](docs/COMPARISON_ARCHITECTURE.md), and [source provenance](docs/PROVENANCE.md).
+
+## Build the scoped cross-implementation index
+
+```sh
+node --test test/comparison-matrix.test.cjs
+node scripts/build-comparison-matrix.cjs
+```
+
+GitHub Actions archives `test-reports/comparison-matrix.v1.json` and `test-reports/comparison-matrix.v1.md`. Source CI run links are **curated historical evidence pointers**, not newly executed or signed result attestations. A second `live-cross-engine-comparison.yml` workflow **actually executes** released JS and Rust in one exact-commit Actions run and writes `test-reports/live-comparison-v1.json` with per-input report SHA-256 and strict-original-exit evidence. Historical Alpha2 has a separately merged reproduction via PR #13. All candidates remain not qualified.
 
 ## Run the standalone self-validation
 

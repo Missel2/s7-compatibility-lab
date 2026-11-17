@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "scope": "SOFTWARE_LOOPBACK_ONLY",
+  "policy": "EVIDENCE_NOT_QUALIFICATION",
+  "candidates": [
+    {
+      "id": "missel-js-alpha2",
+      "label": "Missel2 JavaScript alpha2 (historical)",
+      "ecosystem": "Node-RED JavaScript",
+      "package": "@missel2/node-red-contrib-s7",
+      "version": "0.1.0-alpha.2",
+      "transport": "@missel2/nodes7@0.1.0-alpha.2",
+      "host": "Node-RED 5.0.9",
+      "platform": "ubuntu-24.04/linux-x64",
+      "protocols": [
+        "S7COMM_CLASSIC"
+      ],
+      "availability": "HISTORICAL_SOURCE_PACK",
+      "status": "KNOWN_UNSAFE"
+    },
+    {
+      "id": "oriolrius-js-4_4_1",
+      "label": "Oriolrius JavaScript 4.4.1",
+      "ecosystem": "Node-RED JavaScript",
+      "package": "@oriolrius/node-red-contrib-s7",
+      "version": "4.4.1",
+      "transport": "@oriolrius/nodes7@1.1.5",
+      "host": "Node-RED 5.0.9",
+      "platform": "ubuntu-24.04/linux-x64",
+      "protocols": [
+        "S7COMM_CLASSIC"
+      ],
+      "availability": "PUBLISHED",
+      "status": "KNOWN_UNSAFE"
+    },
+    {
+      "id": "rust-1_4_0",
+      "label": "Rust native Node-RED 1.4.0",
+      "ecosystem": "Node-RED Rust NAPI",
+      "package": "node-red-contrib-s7-rust",
+      "version": "1.4.0",
+      "transport": "RUST_NATIVE",
+      "host": "Node-RED 5.0.9",
+      "platform": "ubuntu-24.04/linux-x64",
+      "protocols": [
+        "S7COMM_CLASSIC"
+      ],
+      "availability": "PUBLISHED",
+      "status": "KNOWN_UNSAFE"
+    }
+  ],
+  "prospects": [
+    {
+      "id": "apache-plc4x",
+      "label": "Apache PLC4X S7 driver",
+      "state": "NOT_ONBOARDED",
+      "required": "select exact released version, protocol capabilities and an independently installed client adapter"
+    },
+    {
+      "id": "python-snap7-client",
+      "label": "python-snap7 client",
+      "state": "NOT_ONBOARDED_AS_CANDIDATE",
+      "required": "separate client-adapter flow from the already installed synthetic python-snap7 server fixture"
+    },
+    {
+      "id": "snap7-native",
+      "label": "Snap7 native client",
+      "state": "NOT_ONBOARDED",
+      "required": "pin a native library release and independent S7Comm client API"
+    },
+    {
+      "id": "s7netplus",
+      "label": "S7.NetPlus (.NET)",
+      "state": "NOT_ONBOARDED",
+      "required": "Linux .NET runtime feasibility and an exact public release"
+    },
+    {
+      "id": "go-s7",
+      "label": "Go S7 libraries",
+      "state": "NOT_ONBOARDED",
+      "required": "select maintained implementation + pinned release and prove loopback support"
+    },
+    {
+      "id": "s7commplus",
+      "label": "S7CommPlus/optimized data",
+      "state": "SEPARATE_PROTOCOL_PENDING",
+      "required": "independent protocol simulator and authorized qualification policy; no substitution of classic S7Comm passes"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "READ_HEALTHY_DB1",
+      "family": "READ",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "healthy-DB1-REAL0-INT4-REAL8-and-kernel-TCP-close-v1",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Read three predefined real/int values over real COTP/S7Comm, then verify client socket teardown",
+      "priority": "P0"
+    },
+    {
+      "id": "WRITE_THREE_DISJOINT_BYTES",
+      "family": "WRITE",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "byte-write-1801-1803-1805-15-29-43-v1",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Single-BYTE positive write and one three-item WRITE_VAR; independently read back exact bytes [15,29,43]",
+      "priority": "P0"
+    },
+    {
+      "id": "READ_IMPOSSIBLE_ACK_LENGTH",
+      "family": "PARSER",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "read-ackdata-declared-length-32767-v1",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Inject a READ_VAR AckData declared length of 32767 without the corresponding bytes; never emit fresh values from it",
+      "priority": "P0"
+    },
+    {
+      "id": "READ_WRONG_PDU_REFERENCE",
+      "family": "PARSER",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "read-ackdata-wrong-pdu-reference-plus-one-v1",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Inject a syntactically valid READ_VAR response with mismatched PDU reference; never accept it as fresh",
+      "priority": "P0"
+    },
+    {
+      "id": "READ_SHORT_REPLY",
+      "family": "PARSER",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "read-ackdata-short-12-byte-tpkt-v1",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Forward a 12-byte truncated S7 response; never emit a false fresh read",
+      "priority": "P0"
+    },
+    {
+      "id": "WRITE_ACK_LOST_AFTER_APPLY",
+      "family": "WRITE",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "write-applied-ack-lost-no-replay-v1",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Drop the positive write ACK after fixture applied write; forbid unsolicited duplicate WRITE_VAR or certain success",
+      "priority": "P0"
+    },
+    {
+      "id": "COTP_AFTER_EXPLICIT_UNLOAD",
+      "family": "LIFECYCLE",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "blackhole-cotp-then-unload-no-reconnect-v1",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Explicitly remove flow during blackholed COTP; no more subsequent COTP requests",
+      "priority": "P1"
+    },
+    {
+      "id": "S7ANY_ADDRESS_24BIT_BOUND",
+      "family": "ADDRESS",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "UNDEFINED",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Reject aliasing/out-of-bound 24-bit addressing before wire send",
+      "priority": "P0"
+    },
+    {
+      "id": "WRITE_MULTI_PDU_SEGMENTATION",
+      "family": "WRITE",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "UNDEFINED",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Verify exact destination offsets and complete multi-PDU write byte sequence",
+      "priority": "P0"
+    },
+    {
+      "id": "READ_OVERLAP_SPLIT_PDU",
+      "family": "READ",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "UNDEFINED",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Independent overlapping-read byte-range and negotiated-PDU oracle",
+      "priority": "P0"
+    },
+    {
+      "id": "LATE_ECONNRESET",
+      "family": "LIFECYCLE",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "UNDEFINED",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Bounded recovery after delayed ECONNRESET, no uncaught process errors",
+      "priority": "P0"
+    },
+    {
+      "id": "CONCURRENT_READ_WRITE",
+      "family": "CONCURRENCY",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "UNDEFINED",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Correct response correlation with overlapping write and read commands",
+      "priority": "P1"
+    },
+    {
+      "id": "SUSTAINED_RECONNECT",
+      "family": "LIFECYCLE",
+      "protocol": "S7COMM_CLASSIC",
+      "oracle": "UNDEFINED",
+      "fixture": "snap7-3.3.1-DB1-2048",
+      "definition": "Bounded socket, timer and memory growth over repeated reconnect cycles",
+      "priority": "P1"
+    },
+    {
+      "id": "HARDWARE_COVERAGE",
+      "family": "HIL",
+      "protocol": "HARDWARE",
+      "oracle": "UNDEFINED",
+      "fixture": "ISOLATED_HIL_UNAVAILABLE",
+      "definition": "Explicit authorized physical Siemens CPU/firmware verification; software loopback cannot qualify",
+      "priority": "HIL"
+    }
+  ],
+  "observations": [
+    {
+      "candidate": "missel-js-alpha2",
+      "scenario": "WRITE_THREE_DISJOINT_BYTES",
+      "outcome": "KNOWN_UNSAFE",
+      "phase": "MERGED_BASELINE",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43959620837",
+        "commit": "c962c3601d2c1923760acb50c1e4568ed2dac4bb",
+        "artifact": "historical-alpha2-three-byte-assessment.json",
+        "assertion": "readback [15,11,13] vs [15,29,43], one WRITE_VAR, original candidate exit 1"
+      },
+      "limitations": [
+        "iso-on-tcp 0.1.1 in modern consumer differs from historical source lock 0.1.0",
+        "Merged source PR #13; run itself was made before the merge and remains valid only for the pinned original candidate"
+      ]
+    },
+    {
+      "candidate": "oriolrius-js-4_4_1",
+      "scenario": "READ_HEALTHY_DB1",
+      "outcome": "SCOPED_PASS",
+      "phase": "MERGED_BASELINE",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43955794209",
+        "commit": "7ab784cc76b431ff8b358756dcb4e267e115004c",
+        "artifact": "common-s7-compare.json",
+        "assertion": "healthy DB1 read and kernel-visible client teardown"
+      }
+    },
+    {
+      "candidate": "oriolrius-js-4_4_1",
+      "scenario": "WRITE_THREE_DISJOINT_BYTES",
+      "outcome": "SCOPED_PASS",
+      "phase": "MERGED_BASELINE",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43956885692",
+        "commit": "e67dfc3fca228ff674750cc5ca4acd6852eef820",
+        "artifact": "published-js-three-byte-assessment.json",
+        "assertion": "readback [15,29,43], one multi-item WRITE_VAR"
+      }
+    },
+    {
+      "candidate": "oriolrius-js-4_4_1",
+      "scenario": "READ_IMPOSSIBLE_ACK_LENGTH",
+      "outcome": "KNOWN_UNSAFE",
+      "phase": "MERGED_BASELINE",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43959620902",
+        "commit": "c962c3601d2c1923760acb50c1e4568ed2dac4bb",
+        "artifact": "published-js-read-characterization.json",
+        "assertion": "declared data length 32767 accepted as fresh without legitimate retry, strict candidate exit 1"
+      }
+    },
+    {
+      "candidate": "oriolrius-js-4_4_1",
+      "scenario": "READ_WRONG_PDU_REFERENCE",
+      "outcome": "NOT_OBSERVED_UNSAFE",
+      "phase": "MERGED_BASELINE",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43954050999",
+        "commit": "7d6543afa1b017341968f1f52e2deef959c72520",
+        "artifact": "published-js-read-characterization.json",
+        "assertion": "no invalid fresh values observed on one injected wrong-reference scenario; strict candidate exit 0"
+      }
+    },
+    {
+      "candidate": "oriolrius-js-4_4_1",
+      "scenario": "READ_SHORT_REPLY",
+      "outcome": "NOT_OBSERVED_UNSAFE",
+      "phase": "MERGED_BASELINE",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43954050999",
+        "commit": "7d6543afa1b017341968f1f52e2deef959c72520",
+        "artifact": "published-js-read-characterization.json",
+        "assertion": "no invalid fresh values observed on one injected 12-byte response; strict candidate exit 0"
+      }
+    },
+    {
+      "candidate": "rust-1_4_0",
+      "scenario": "READ_HEALTHY_DB1",
+      "outcome": "SCOPED_PASS",
+      "phase": "MERGED_BASELINE",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43955794209",
+        "commit": "7ab784cc76b431ff8b358756dcb4e267e115004c",
+        "artifact": "common-s7-compare.json",
+        "assertion": "healthy DB1 read and kernel-visible client teardown"
+      }
+    },
+    {
+      "candidate": "rust-1_4_0",
+      "scenario": "READ_IMPOSSIBLE_ACK_LENGTH",
+      "outcome": "SCOPED_PASS",
+      "phase": "MERGED_BASELINE",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43959620849",
+        "commit": "c962c3601d2c1923760acb50c1e4568ed2dac4bb",
+        "artifact": "rust-1.4.0-baseline-assessment.json",
+        "assertion": "rejects invalid declared length and obtains valid read on a retry"
+      }
+    },
+    {
+      "candidate": "rust-1_4_0",
+      "scenario": "READ_WRONG_PDU_REFERENCE",
+      "outcome": "KNOWN_UNSAFE",
+      "phase": "MERGED_BASELINE",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43959620849",
+        "commit": "c962c3601d2c1923760acb50c1e4568ed2dac4bb",
+        "artifact": "rust-1.4.0-baseline-assessment.json",
+        "assertion": "accepted forged PDU reference as fresh, original strict candidate exit 1"
+      }
+    },
+    {
+      "candidate": "rust-1_4_0",
+      "scenario": "WRITE_ACK_LOST_AFTER_APPLY",
+      "outcome": "KNOWN_UNSAFE",
+      "phase": "MERGED_BASELINE",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43959620849",
+        "commit": "c962c3601d2c1923760acb50c1e4568ed2dac4bb",
+        "artifact": "rust-1.4.0-baseline-assessment.json",
+        "assertion": "observed duplicate WRITE_VAR after dropped ACK and unexpected certain success"
+      }
+    },
+    {
+      "candidate": "rust-1_4_0",
+      "scenario": "COTP_AFTER_EXPLICIT_UNLOAD",
+      "outcome": "KNOWN_UNSAFE",
+      "phase": "MERGED_BASELINE",
+      "evidence": {
+        "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/43959620849",
+        "commit": "c962c3601d2c1923760acb50c1e4568ed2dac4bb",
+        "artifact": "rust-1.4.0-baseline-assessment.json",
+        "assertion": "extra COTP attempts observed after explicit flow unload; no persistent sockets at end"
+      }
+    }
+  ]
+}

@@ -95,7 +95,7 @@ function main(){
   assert.equal(process.env.GITHUB_SHA,commit);
   const registry=require('../contracts/registry.json');
   const contract=registry.contracts.find(c=>c.id==='S7-ERR-006');
-  assert.equal(contract?.status,'PR_OPEN_UNQUALIFIED');
+  assert.equal(contract?.status,'MERGED_BASELINE_UNSAFE');
   assert.equal(contract?.package,'@oriolrius/node-red-contrib-s7');
   assert.equal(contract?.version,'4.4.1');
   const output={schemaVersion:1,scope:'SOFTWARE_LOOPBACK_ONLY',

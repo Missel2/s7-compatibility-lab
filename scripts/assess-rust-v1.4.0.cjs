@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 
 const root = path.resolve(__dirname, "..");
 const reportDir = path.join(root, "test-reports");
@@ -80,10 +81,14 @@ function execute(name, env, command, script, reportName, verifier, expectedExit)
       "; actual="+child.status+" signal="+child.signal+" error="+child.error+
       "\n"+transcript.slice(-3000));
   assert.ok(fs.existsSync(filepath),name+" must create machine-readable report");
-  const raw=JSON.parse(fs.readFileSync(filepath,"utf8"));
+  // Hash the exact original bytes assessed, not a JSON serialization.
+  // The downstream same-run collator rejects any replacement after assessment.
+  const originalBytes=fs.readFileSync(filepath);
+  const raw=JSON.parse(originalBytes);
   const assessment=verifier(raw);
+  const reportSha256=crypto.createHash("sha256").update(originalBytes).digest("hex");
   process.stdout.write("CHARACTERIZED_"+name+"="+JSON.stringify(assessment)+"\n");
-  return { name,exitCode:child.status,report:reportName,...assessment };
+  return { name,exitCode:child.status,report:reportName,reportSha256,...assessment };
 }
 function main() {
   fs.mkdirSync(reportDir,{recursive:true});

@@ -1,0 +1,74 @@
+name: Live same-run S7Comm JavaScript vs Rust evidence (NOT qualification)
+on: [pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  same-run-cross-engine:
+    name: Exact-head JS/Rust real strict faults and common independent evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.4'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Install exact hashed localhost-only fixture
+        run: >-
+          python -m pip install --disable-pip-version-check --only-binary=:all: --require-hashes -r requirements/python-snap7.txt
+      - name: Run source-only direct-collator adversarial controls
+        run: |
+          node --check scripts/collate-live-comparison.cjs
+          node --test test/live-comparison-collator.test.cjs
+      - name: Install exact published independent JS and real Rust NAPI under Node-RED
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .candidate-consumer
+          printf '%s\n' '{"name":"independent-s7-exact-head-pair","version":"0.0.0","private":true}' > .candidate-consumer/package.json
+          npm install --prefix .candidate-consumer --ignore-scripts --no-audit --no-fund --save-exact \
+            node-red@5.0.9 node-red-node-test-helper@0.3.6 \
+            @oriolrius/node-red-contrib-s7@4.4.1 node-red-contrib-s7-rust@1.4.0
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const bytes=fs.readFileSync('.candidate-consumer/package-lock.json');
+          const lock=JSON.parse(bytes).packages;
+          for(const [name,ver] of Object.entries({
+            'node-red':'5.0.9','node-red-node-test-helper':'0.3.6',
+            '@oriolrius/node-red-contrib-s7':'4.4.1','node-red-contrib-s7-rust':'1.4.0',
+            '@oriolrius/nodes7':'1.1.5'
+          })){
+            const p=lock['node_modules/'+name];
+            if(p?.version!==ver||!p.integrity||!p.resolved?.startsWith('https://registry.npmjs.org/'))
+              throw Error('Not an exact published engine/transport '+name);
+            console.log('CANDIDATE_SOURCE='+name+'@'+ver+' '+p.integrity);
+          }
+          console.log('EXACT_HEAD_LOCK_SHA256='+crypto.createHash('sha256').update(bytes).digest('hex'));
+          NODE
+      - name: Verify actual JS and Rust healthy S7Comm read / real TCP teardown
+        run: node test/candidates/common-node-red-s7-read.cjs .candidate-consumer
+        timeout-minutes: 4
+      - name: Execute strict published JavaScript 3-BYTE write oracle
+        run: node scripts/assess-published-js-write.cjs
+        timeout-minutes: 3
+      - name: Execute strict published JavaScript parser fault cases
+        run: node scripts/assess-published-js-read.cjs
+        timeout-minutes: 5
+      - name: Execute Rust 1.4.0 strict invalid length, reference, ACK and lifecycle
+        run: node scripts/assess-rust-v1.4.0.cjs
+        timeout-minutes: 9
+      - name: Collate every original report from same head (never qualify)
+        run: node scripts/collate-live-comparison.cjs
+        timeout-minutes: 1
+      - name: Archive raw strict candidate reports, wire evidence and same-run comparison
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: real-same-run-S7Comm-JS-vs-Rust-NOT-QUALIFIED
+          path: test-reports/*.json
+          if-no-files-found: warn
+          retention-days: 14
