@@ -42,13 +42,21 @@ Seven HIL gates remain **PENDING_HARDWARE**. Do not connect CI to physical contr
 
 - [x] [PR #19](https://github.com/Missel2/s7-compatibility-lab/pull/19) (merged): first real external Python client, independent process, 12 exact DB1 bytes, real COTP/READ_VAR and clean close; 5/5 adversarial tests. [Original real CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44037883892).
 - [x] Four-candidate versioned capability declarations (56 scenario cells) + source-bound same-head client evidence. [Shared CI](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44038695742) executes Python along with the JS/Rust clients.
-- [ ] Next independent client ecosystem: Apache PLC4X Java on an exact released, verified JDK/Maven artifact, same READ_HEALTHY_DB1 independent wire oracle.
+- [x] Next independent client ecosystem: Apache PLC4X Java on an exact released, verified JDK/Maven artifact, same READ_HEALTHY_DB1 independent wire oracle.
 - [ ] Add independent S7ANY address bounds and multi-PDU read/write scenarios; do not mislabel Python sequential API operations as one multi-item WRITE_VAR.
 
-### Current review: fifth independent PLC4X Java driver (PR #21)
+### Merged fifth independent PLC4X Java driver (PR #21)
 
 - [x] Real published Apache PLC4X 1.0.0 (Maven S7 driver JAR pinned SHA-256), Java21, actual DB1 REAL0 12.5/INT4 -123/REAL8 3.25 from classic COTP/S7Comm. Original Java exit0, one actual READ_VAR, zero WRITE_VAR.
 - [x] Strict original observer **red exit 1**: PLC4X sends 21 unframed zero bytes after valid framed COTP disconnect. SHA256 and original fail attached to [real #44045494434](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44045494434); see [full negative signature](PLC4X_JAVA_DISCONNECT.md).
 - [x] Separate exact-fingerprint known-unsafe characterization preserves this negative instead of suppressing it. This is **not** a green safety gate for PLC4X.
-- [ ] [PR #21](https://github.com/Missel2/s7-compatibility-lab/pull/21) (unmerged): add candidate status `KNOWN_UNSAFE` to five-client matrix with all other Java scenarios `NOT_TESTED`. Require successful exact-head CI and independent review.
+- [x] [PR #21](https://github.com/Missel2/s7-compatibility-lab/pull/21) (merged at 6792728b0987154cd27b03f71e69e31cf4dd7d79): add candidate status `KNOWN_UNSAFE` to five-client matrix with all other Java scenarios `NOT_TESTED`. Require successful exact-head CI and independent review.
 - [ ] Repeat close protocol test with different isolated S7 server implementation/minimal TCP peer to distinguish protocol-stack failure from fixture interaction, then propose upstream fix and red-on-current/green-on-candidate test.
+
+### Second independent server falsification (PR #23, review-stage)
+
+- [x] Independent Node-only 127.0.0.1 COTP/S7Comm read-only implementation — not python-snap7 and not the existing TCP relay; **no direct hardware access**.
+- [x] Independently decoded actual released PLC4X 1.0.0 contiguous single-item DB1[0:12] READ_VAR; exact three values and 12 raw bytes correct.
+- [x] [Real CI #44050053619](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44050053619) independently reproduced exact **21 unframed zero bytes after COTP disconnect** in **both** server response policies: silence and explicit COTP DC confirm, original Java exit0 and original strict oracle red1. [Original source-bound artifacts](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44050053619/artifacts/14313550909).
+- [ ] [PR #23](https://github.com/Missel2/s7-compatibility-lab/pull/23) requires exact-head final CI/review/explicit merge authorization. Keep five-driver capability matrix unchanged: this is **additional fixture corroboration**, not a new driver/scenario pass.
+- [ ] Investigate actual PLC4X 1.0.0 COTP disconnect serialization; create minimal Apache upstream reproducer, then compare independently released later version (if proven) red-on-1.0.0 vs green-on-fixed. A full CPU/firmware oracle stays PENDING_HARDWARE.

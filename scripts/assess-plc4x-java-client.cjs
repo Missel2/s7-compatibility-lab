@@ -179,4 +179,4 @@ async function main(){
  }
 }
 if(require.main===module)main().catch(e=>{console.error("PLC4X_HARNESS_RED "+String(e?.stack||e));process.exitCode=1;});
-module.exports={verifyPlc4xEvidence};
+module.exports={verifyPlc4xEvidence,javaClasspath,runJava};

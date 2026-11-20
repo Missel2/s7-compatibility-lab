@@ -34,7 +34,7 @@ test("Java is actually observed unsafe on teardown; every unexecuted function re
  const r=validateCapabilities(manifest,catalog,pinned);
  const cell=id=>r.rows.find(x=>x.candidate==="apache-plc4x-java-1_0_0"&&x.scenario===id);
  assert.equal(cell("READ_HEALTHY_DB1").outcome,"KNOWN_UNSAFE");
- assert.equal(cell("READ_HEALTHY_DB1").phase,"PR_OPEN");
+ assert.equal(cell("READ_HEALTHY_DB1").phase,"MERGED_BASELINE");
  assert.equal(cell("WRITE_THREE_DISJOINT_BYTES").state,"NOT_TESTED");
  assert.equal(cell("S7ANY_ADDRESS_24BIT_BOUND").state,"NOT_TESTED");
  assert.equal(cell("HARDWARE_COVERAGE").state,"PENDING_HARDWARE");

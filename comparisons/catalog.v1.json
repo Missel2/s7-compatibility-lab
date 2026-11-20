@@ -424,7 +424,7 @@
       "candidate": "apache-plc4x-java-1_0_0",
       "scenario": "READ_HEALTHY_DB1",
       "outcome": "KNOWN_UNSAFE",
-      "phase": "PR_OPEN",
+      "phase": "MERGED_BASELINE",
       "evidence": {
         "run": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/44045494434",
         "commit": "3338d0ded4153cf65d4e1fbcaf214b0c7cf2580d",
@@ -432,9 +432,10 @@
         "assertion": "Real Apache PLC4X Java21 READ_VAR got 12.5/-123/3.25 and Java exit 0, but after real 11-byte COTP Disconnect Request sent 21 unframed zero bytes client-to-fixture; original strict assessor exit 1; exact SHA256 c90232586b801f9558a76f2f963eccd831d9fe6775e4c8f1446b2331aa2132f2"
       },
       "limitations": [
-        "PR #21 unmerged; exact original real release and fixture-specific known-unsafe characterization, not hardware qualification",
         "DB1 values were correct, failure concerns non-TPKT bytes after valid COTP disconnect, not read payload correctness",
-        "One controller type and synthetic python-snap7 server; Siemens CPU behavior NOT proven"
+        "One controller type and synthetic python-snap7 server; Siemens CPU behavior NOT proven",
+        "PR #21 merged at 6792728b0987154cd27b03f71e69e31cf4dd7d79; strict original failure and exact source-commit unchanged",
+        "Independently corroborated with second Node COTP/S7Comm implementation under silence and COTP Disconnect Confirm: real CI https://github.com/Missel2/s7-compatibility-lab/actions/runs/44050053619, exact same 21-zero-byte SHA256"
       ]
     }
   ]

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "purpose": "PINNED_UPSTREAM_RELEASE_SOURCE_FORENSICS_NOT_PATCHED_DRIVER_QUALIFICATION",
+  "release": "Apache PLC4X 1.0.0",
+  "sourceCommit": "ea229918f5d07700e04d7d69ab1645da679cb700",
+  "sourcePath": "plc4j/transports/cotp/src/main/java/org/apache/plc4x/java/transport/cotp/CotpTransportInstance.java",
+  "sourceBlobSha1": "63b501c8cdfb8216e3fd0707d61681991d74e1d6",
+  "sourceUrl": "https://github.com/apache/plc4x/blob/ea229918f5d07700e04d7d69ab1645da679cb700/plc4j/transports/cotp/src/main/java/org/apache/plc4x/java/transport/cotp/CotpTransportInstance.java",
+  "sourceFinding": "In CotpTransportInstance.close(), the COTP DisconnectRequest is wrapped in TPKTPacket, serialized into a fixed 32-byte WriteBufferByteBased, then the entire byte array is sent via tcpTransport.write. The generated model reports a true TPKT length of 11 bytes. The other CR/DT paths in this exact source use getLengthInBytes() and allocate the correct size.",
+  "publishedDriverJarSha256": "907aa658a3040c86ff2fe7b94625d1537084ed3822dc4e9cd7f78dedc5ebe7d7",
+  "publishedCotpReleaseVersion": "1.0.0",
+  "originalAllocatedBufferBytes": 32,
+  "actualSerializedTpktBytes": 11,
+  "excessBytes": 21,
+  "excessBytesSha256": "c90232586b801f9558a76f2f963eccd831d9fe6775e4c8f1446b2331aa2132f2",
+  "proposedCorrection": "In the published close() serialization, allocate WriteBufferByteBased(new byte[tpktPacket.getLengthInBytes()]) instead of the fixed-size 32-byte array; preserve the original COTP packet fields and verify end-to-end on independent test servers.",
+  "corroboratingIndependentRun": "https://github.com/Missel2/s7-compatibility-lab/actions/runs/44051135455",
+  "candidateQualified": false,
+  "hardware": "PENDING_HARDWARE"
+}
