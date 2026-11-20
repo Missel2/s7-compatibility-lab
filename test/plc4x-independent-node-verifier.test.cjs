@@ -4,7 +4,8 @@ const test=require("node:test");
 const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const path=require("node:path");
-const {verifyIndependentReport}=require("../scripts/assess-plc4x-independent-node-peer.cjs");
+const os=require("node:os");
+const {characterize,runStrictProcess}=require("../scripts/assess-plc4x-independent-node-peer.cjs");
 const {digest}=require("../fixtures/independent-cotp-s7-server.cjs");
 const head="a".repeat(40);
 const fixtureSource=path.resolve(__dirname,"../fixtures/independent-cotp-s7-server.cjs");
@@ -39,50 +40,98 @@ function specimen(mode="silence",withTrailer=true){
    events.push({direction:"server_tx",length:w.length,sha256:digest(w)});
   }
  }
- const session={session:1,phase:"COTP_DISCONNECTED",closed:true,
+ const session={session:1,phase:"COTP_DISCONNECTED",closed:true,sawFin:true,closeHadError:false,
   received:[...received],sent:[...out],events,
   connections:1,setup:1,reads:1,writes:0,disconnects:1,validRead:true,errors:[],
   invalidTail:withTrailer?{direction:"client-to-server",afterCotpDisconnect:true,bytes:21,
-   totalObserved:21,sha256:knownTailSha,allZero:true,prefixHex:"00".repeat(21),
+   totalObserved:21,sha256:knownTailSha,allZero:true,rawHex:"00".repeat(21),prefixHex:"00".repeat(21),
    complete:true,truncated:false,termination:"TCP_FIN"}:null};
+ const stderr=Buffer.from("Original Java diagnostic\n");
  const report={schemaVersion:1,sourceCommit:head,scope:"SOFTWARE_LOOPBACK_ONLY",
   serverImplementation:"INDEPENDENT_NODE_COTP_S7COMM",serverDependency:"NODE_BUILTINS_ONLY",
   serverSourceSha256:digest(fs.readFileSync(fixtureSource)),disconnectMode:mode,
   candidate:"org.apache.plc4x:plc4j-driver-s7:1.0.0",
   driverJarSha256:driverSha,javaMajor:21,candidateQualified:false,
   originalJavaExit:0,originalSignal:null,originalTimedOut:false,originalTruncated:false,
-  originalSha256:digest(original),classification:withTrailer?"KNOWN_UNSAFE":"SCOPED_PASS",
-  originalStrictCandidateExit:withTrailer?1:0,hardware:"PENDING_HARDWARE",session};
- return {report,original};
+  originalSha256:digest(original),originalStderrSha256:digest(stderr),
+  hardware:"PENDING_HARDWARE",sessionCount:1,serverStopped:true,session};
+ return {report,original,stderr};
 }
-test("exact original negative recognized with independently reconstructed raw TCP packet hashes",()=>{
- for(const mode of ["silence","confirm"]){
-  const {report,original}=specimen(mode);
-  const out=verifyIndependentReport(report,original,head,mode);
+
+function execute(t, {report, original, stderr}, mode="silence") {
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),"s7-strict-test-"));
+ t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const capture=Buffer.from(JSON.stringify(report));
+ const inputs=[capture,original,stderr].map((bytes,i)=>{
+  const file=path.join(dir,String(i));
+  fs.writeFileSync(file,bytes);
+  return file;
+ });
+ return {capture,strict:runStrictProcess(...inputs,head,mode)};
+}
+
+function check({capture,strict}, {original,stderr}, mode="silence") {
+ return characterize(capture,original,stderr,strict,head,mode);
+}
+
+test("strict CLI exits 1 for the measured violation and the characterization retains it",t=>{
+ for (const mode of ["silence","confirm"]) {
+  const data=specimen(mode);
+  const execution=execute(t,data,mode);
+  assert.equal(execution.strict.status,1);
+  assert.equal(JSON.parse(execution.strict.stdout).outcome,"CANDIDATE_PROTOCOL_FAILURE");
+  const out=check(execution,data,mode);
   assert.equal(out.classification,"KNOWN_UNSAFE");
   assert.equal(out.invalidTrailerBytes,21);
   assert.equal(out.originalStrictCandidateExit,1);
   assert.equal(out.candidateQualified,false);
  }
 });
-test("a genuinely clean independent read is only a narrow scoped PASS, never qualification",()=>{
- const {report,original}=specimen("confirm",false);
- const out=verifyIndependentReport(report,original,head,"confirm");
- assert.equal(out.classification,"SCOPED_PASS");
- assert.equal(out.candidateQualified,false);
- assert.equal(out.invalidTrailerBytes,0);
+
+test("clean strict exit 0 cannot satisfy the historical negative characterization",t=>{
+ const data=specimen("confirm",false);
+ const execution=execute(t,data,"confirm");
+ assert.equal(execution.strict.status,0);
+ assert.equal(JSON.parse(execution.strict.stdout).outcome,"SCOPED_PASS");
+ assert.throws(()=>check(execution,data,"confirm"));
+ // Changing the numeric status alone cannot turn a clean run into a measured failure.
+ execution.strict.status=1;
+ assert.throws(()=>check(execution,data,"confirm"));
 });
-test("reject modified original bytes, unpinned Java, false oracle, forged fixture, write, misframed S7 or missing COTP",()=>{
+
+test("missing, fake, stale, wrong-mode and unrelated red exits fail characterization",t=>{
+ const data=specimen();
+ const execution=execute(t,data);
+ const rehash=edit=>{
+  const report=JSON.parse(execution.strict.stdout);
+  edit(report);
+  return Buffer.from(JSON.stringify(report));
+ };
+ for (const change of [
+  {status:2}, {status:null,signal:"SIGTERM"}, {status:1,error:"ETIMEDOUT"},
+  {stdout:Buffer.alloc(0)}, {stderr:Buffer.from("Harness exception")},
+  {stdout:rehash(r=>{r.captureSha256="a".repeat(64)})},
+  {stdout:rehash(r=>{r.javaStderrSha256="a".repeat(64)})},
+  {stdout:rehash(r=>{r.disconnectMode="confirm"})},
+  {stdout:rehash(r=>{r.reason="UNRELATED_SOCKET_FAILURE"})}
+ ]) {
+  assert.throws(()=>check({...execution,strict:{...execution.strict,...change}},data));
+ }
+});
+
+test("strict CLI distinguishes invalid evidence from a genuine protocol violation",t=>{
  const edits=[
   r=>{r.report.sourceCommit="b".repeat(40)},
   r=>{r.report.driverJarSha256="b".repeat(64)},
   r=>{r.report.serverSourceSha256="b".repeat(64)},
   r=>{r.report.originalJavaExit=1},
-  r=>{r.report.originalStrictCandidateExit=0},
-  r=>{r.report.classification="SCOPED_PASS"},
   r=>{r.report.candidateQualified=true},
+  r=>{r.report.serverStopped=false},
+  r=>{r.report.sessionCount=2},
   r=>{r.report.session.phase="READY"},
   r=>{r.report.session.closed=false},
+  r=>{r.report.session.sawFin=false},
+  r=>{r.report.session.closeHadError=true},
   r=>{r.report.session.reads=0},
   r=>{r.report.session.writes=1},
   r=>{r.report.session.disconnects=0},
@@ -91,24 +140,48 @@ test("reject modified original bytes, unpinned Java, false oracle, forged fixtur
   r=>{r.report.session.received[2]=r.report.session.received[2].replace("000c","000a")},
   r=>{r.report.session.sent[2]=r.report.session.sent[2].replace("ff040060","ff040020")},
   r=>{r.report.session.events[2].sha256="1".repeat(64)},
+  r=>{r.report.session.events[2].direction="server_tx"},
+  r=>{r.report.session.events.reverse()},
+  r=>{r.report.session.invalidTail.direction="server-to-client"},
   r=>{r.report.session.invalidTail.bytes=4},
   r=>{r.report.session.invalidTail.totalObserved=4},
   r=>{r.report.session.invalidTail.afterCotpDisconnect=false},
   r=>{r.report.session.invalidTail.sha256="0".repeat(64)},
+  r=>{r.report.session.invalidTail.rawHex="ff"+"00".repeat(20)},
   r=>{r.report.session.invalidTail.truncated=true},
   r=>{r.report.session.invalidTail.termination="TIME_LIMIT"},
   r=>{r.report.session.invalidTail.allZero=false},
   r=>{r.report.originalSha256="notsha"},
   r=>{r.original=Buffer.from(JSON.stringify({status:"forged"}))},
+  r=>{r.stderr=Buffer.from("tampered stderr")}
  ];
- for(const mutate of edits){
-  const r=specimen("silence");
-  mutate(r);
-  assert.throws(()=>verifyIndependentReport(r.report,r.original,head,"silence"),String(mutate));
+ for (const mutate of edits) {
+  const data=specimen();
+  mutate(data);
+  const {strict}=execute(t,data);
+  assert.equal(strict.status,2,String(mutate));
+  assert.equal(strict.stdout.length,0);
+  assert.match(strict.stderr.toString(),/INVALID_NODE_PEER_EVIDENCE/);
  }
 });
-test("confirm-mode response is required, rather than silently accepting missing COTP DC",()=>{
- const r=specimen("confirm");
- r.report.session.sent.pop();
- assert.throws(()=>verifyIndependentReport(r.report,r.original,head,"confirm"));
+
+test("a different real trailer is strict red without matching the known 21-byte signature",t=>{
+ const data=specimen();
+ const raw=Buffer.concat([Buffer.alloc(20),Buffer.from([1])]);
+ Object.assign(data.report.session.invalidTail,{
+  rawHex:raw.toString("hex"),prefixHex:raw.toString("hex"),sha256:digest(raw),allZero:false
+ });
+ const execution=execute(t,data);
+ assert.equal(execution.strict.status,1);
+ assert.throws(()=>check(execution,data),/exact released 1.0.0 trailer/);
+});
+
+test("confirm mode requires a correctly referenced COTP DC",t=>{
+ const data=specimen("confirm");
+ data.report.session.sent[3]="0300000a05c000020000";
+ const bytes=Buffer.from(data.report.session.sent[3],"hex");
+ data.report.session.events[7].sha256=digest(bytes);
+ assert.equal(execute(t,data,"confirm").strict.status,2);
+ data.report.session.sent.pop();
+ assert.equal(execute(t,data,"confirm").strict.status,2);
 });

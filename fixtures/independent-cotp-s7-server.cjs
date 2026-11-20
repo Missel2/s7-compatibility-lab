@@ -6,7 +6,6 @@
 const assert=require("node:assert/strict");
 const net=require("node:net");
 const crypto=require("node:crypto");
-const {once}=require("node:events");
 
 const host="127.0.0.1";
 const digest=b=>crypto.createHash("sha256").update(b).digest("hex");
@@ -129,7 +128,7 @@ async function startIndependentS7Server({disconnectMode="silence"}={}){
   const id=sessions.length+1;
   const s={session:id,phase:"EXPECT_COTP_CR",received:[],sent:[],events:[],
    connections:0,setup:0,reads:0,writes:0,disconnects:0,
-   invalidTail:null,errors:[],closed:false,validRead:false};
+   invalidTail:null,errors:[],closed:false,sawFin:false,closeHadError:null,validRead:false};
   sessions.push(s);sockets.add(socket);
   socket.setNoDelay(true);
   socket.setTimeout(15000,()=>{s.errors.push("SOCKET_IDLE_TIMEOUT");socket.destroy();});
@@ -144,7 +143,7 @@ async function startIndependentS7Server({disconnectMode="silence"}={}){
    const raw=Buffer.concat(malformed);
    s.invalidTail={direction:"client-to-server",afterCotpDisconnect:s.disconnects===1,
     bytes:raw.length,sha256:digest(raw),allZero:raw.every(x=>x===0),
-    prefixHex:raw.subarray(0,32).toString("hex"),
+    rawHex:raw.toString("hex"),prefixHex:raw.subarray(0,32).toString("hex"),
     complete:origin==="TCP_FIN"||origin==="TCP_CLOSE",
     truncated:malformedOverflow,termination:origin,totalObserved:unframedTotal};
   }
@@ -161,13 +160,14 @@ async function startIndependentS7Server({disconnectMode="silence"}={}){
     }
     pending=Buffer.concat([pending,chunk]);
     assert.ok(pending.length<=MAX_TPKT*2,"Oversize input stream");
-    while(pending.length>=4){
+    while(pending.length>0){
      if(pending[0]!==3){
       unframed=true;unframedTotal=pending.length;malformed=[pending.subarray(0,MAX_TRAILER)];malformedOverflow=pending.length>MAX_TRAILER;
       malformedTimer=setTimeout(()=>{closeTail("TIME_LIMIT");socket.destroy();},2000);
       if(malformedOverflow){closeTail("SIZE_LIMIT");socket.destroy();}
       return;
      }
+     if(pending.length<4)break;
      assert.equal(pending[1],0);
      const len=pending.readUInt16BE(2);
      assert.ok(len>=7&&len<=MAX_TPKT,"Unbounded or invalid TPKT length");
@@ -188,11 +188,18 @@ async function startIndependentS7Server({disconnectMode="silence"}={}){
    }catch(e){failed(e)}
   });
   socket.once("end",()=>{
+   s.sawFin=true;
    if(unframed)closeTail("TCP_FIN");
    else if(pending.length>0)s.errors.push("TRUNCATED_TPKT_AT_FIN");
    socket.end();
   });
-  socket.once("close",()=>{if(unframed)closeTail("TCP_CLOSE");s.closed=true;sockets.delete(socket);if(malformedTimer)clearTimeout(malformedTimer);});
+  socket.once("close",hadError=>{
+   if(unframed)closeTail("TCP_CLOSE");
+   s.closeHadError=hadError;
+   s.closed=true;
+   sockets.delete(socket);
+   if(malformedTimer)clearTimeout(malformedTimer);
+  });
   socket.on("error",e=>s.errors.push("SOCKET_ERROR:"+String(e.code||e.message)));
  });
  await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(0,host,resolve);});
