@@ -56,3 +56,39 @@ jobs:
             test-reports/plc4x-disconnect-serializer-*.json
           if-no-files-found: warn
           retention-days: 14
+
+  historical-close:
+    name: Historical PLC4X 0.13.1 read and TCP FIN on the same peer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      S7_LAB_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.4'
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # pinned v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Resolve pinned historical Java dependencies
+        working-directory: java/plc4x-0.13.1
+        run: >-
+          mvn --batch-mode --no-transfer-progress
+          org.apache.maven.plugins:maven-dependency-plugin:3.9.0:build-classpath
+          -Dmdep.outputFile=target/classpath.txt
+      - name: Measure typed read and TCP close with released PLC4X 0.13.1
+        run: node scripts/assess-plc4x-historical-close.cjs
+        timeout-minutes: 2
+      - name: Archive historical Java process and direct-wire evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: independent-node-vs-published-PLC4X-0.13.1-NOT-QUALIFIED
+          path: test-reports/plc4x-0131-*
+          if-no-files-found: warn
+          retention-days: 14

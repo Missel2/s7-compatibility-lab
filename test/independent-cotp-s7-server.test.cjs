@@ -4,9 +4,11 @@
 // This exercises only the tiny disposable Node server, NOT a real PLC client.
 const test=require("node:test");
 const assert=require("node:assert/strict");
+const fs=require("node:fs");
 const net=require("node:net");
 const {setTimeout:delay}=require("node:timers/promises");
 const {startIndependentS7Server,tpkt,digest}=require("../fixtures/independent-cotp-s7-server.cjs");
+const {verifyHistoricalCapture}=require("../scripts/assess-plc4x-historical-close.cjs");
 const host="127.0.0.1";
 const zero=Buffer.alloc(21);
 function job(ref,params){
@@ -21,7 +23,7 @@ const cr=Buffer.from("0300001611e00000000100c1020100c2020102c0010a","hex");
 const setup=job(1,Buffer.from([0xf0,0,0,1,0,1,1,0xe0]));
 const read=job(2,Buffer.concat([Buffer.from([4,3]),any(0,4),any(4,2),any(8,4)]));
 const dr=Buffer.from("0300000b06800000000000","hex");
-async function session({mode="silence",parts=[],readFrame=read,writeAfter=false}={}){
+async function session({mode="silence",parts=[],readFrame=read,writeAfter=false,sendDisconnect=true}={}){
  const fixture=await startIndependentS7Server({disconnectMode:mode});
  const socket=net.createConnection({host,port:fixture.port});
  socket.on("error",()=>{});
@@ -47,8 +49,10 @@ async function session({mode="silence",parts=[],readFrame=read,writeAfter=false}
   socket.write(readFrame);
   if(!writeAfter)await wait(()=>responses.length>=3,"S7 READ_VAR ACK");
   if(!writeAfter){
-   socket.write(dr);
-   await delay(45);
+   if(sendDisconnect){
+    socket.write(dr);
+    await delay(45);
+   }
    if(parts.length){
     for(let i=0;i<parts.length;i++){
      if(i===parts.length-1)socket.end(parts[i]);
@@ -93,6 +97,39 @@ test("real published PLC4X one-item contiguous DB1[0:12] request returns all exa
  assert.equal(x.record.reads,1);
  assert.equal(x.record.writes,0);
  assert.equal(x.record.errors.length,0);
+});
+test("historical PLC4X typed REAL/INT/REAL request reads the same synthetic fields",async()=>{
+ const request=Buffer.from(
+  "0300003702f08032010000000a002600000403120a10080001000184000000120a10050001000184000020120a10080001000184000040",
+  "hex");
+ const {frames,record}=await session({readFrame:request,sendDisconnect:false});
+ assert.equal(frames[2].readUInt16BE(11),request.readUInt16BE(11));
+ assert.equal(frames[2].subarray(19).toString("hex"),"0403ff04002041480000ff040010ff85ff04002040500000");
+ assert.equal(record.reads,1);
+ assert.deepEqual(record.errors,[]);
+ const head="a".repeat(40);
+ const stdout=Buffer.from(JSON.stringify({version:"0.13.1",sourceCommit:head,
+  observed:{real0:12.5,int4:-123,real8:3.25}}));
+ const stderr=Buffer.alloc(0);
+ const capture={
+  version:"0.13.1", sourceCommit:head, driver:"org.apache.plc4x:plc4j-driver-s7:0.13.1",
+  driverJarSha256:"7be84d58e3f06666df63ed64e55821153bf663c3d4c5855d846a7617b0dcc89a",
+  fixtureSourceSha256:digest(fs.readFileSync(require.resolve("../fixtures/independent-cotp-s7-server.cjs"))),
+  java:{code:0,signal:null,timedOut:false,truncated:false,stdoutSha256:digest(stdout),stderrSha256:digest(stderr)},
+  sessions:[record]
+ };
+ const observation=verifyHistoricalCapture(capture,stdout,stderr);
+ assert.equal(observation.outcome,"NOT_OBSERVED_UNSAFE");
+ assert.equal(observation.drDcExercised,false);
+ for(const change of [{sawFin:false},{disconnects:1},{invalidTail:{bytes:1}},
+  {events:record.events.slice(0,-1)}]){
+  assert.throws(()=>verifyHistoricalCapture({...capture,sessions:[{...record,...change}]},stdout,stderr));
+ }
+ const wrongCount=Buffer.from(request);
+ wrongCount.writeUInt16BE(2,23);
+ const rejected=await session({readFrame:wrongCount,writeAfter:true});
+ assert.equal(rejected.record.reads,0);
+ assert.match(rejected.record.errors[0],/single typed S7ANY element/);
 });
 test("independent second server observes all 21 malformed bytes, not just the first TCP event",async()=>{
  const joined=await session({parts:[zero]});
