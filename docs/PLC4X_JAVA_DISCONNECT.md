@@ -72,3 +72,19 @@ node scripts/verify-plc4x-disconnect-serializer.cjs
 ```
 
 The original captures, measured strict results and serializer reports are written to `test-reports/`. Both strict 1.0.0 results remain exit 1 with `KNOWN_UNSAFE` characterization. Hardware coverage is `PENDING_HARDWARE`.
+
+## Historical release comparison with the same Node peer
+
+The pinned PLC4X 0.13.1 release requests three typed S7ANY items in one READ_VAR. PLC4X 1.0.0 requests the same DB1 data as one contiguous BYTE item. The peer now accepts both request layouts for the three fixed synthetic fields. It records the actual request, response, event hashes and TCP close in both cases.
+
+| Release | DB1 values | COTP Disconnect Request | TCP FIN | Unframed bytes | Observation |
+| --- | --- | --- | --- | --- | --- |
+| 0.13.1 | 12.5, −123, 3.25 | 0 | Observed | 0 | `NOT_OBSERVED_UNSAFE` for the captured close |
+| 1.0.0 | 12.5, −123, 3.25 | 1 | Observed | 21 | `KNOWN_UNSAFE`, strict exit 1 |
+
+PLC4X 0.13.1 closes without a Disconnect Request in this run. It therefore does not exercise the COTP DR/DC exchange. The historical result does not qualify that exchange or enter the candidate qualification matrix. The 1.0.0 strict baseline and hardware scope are tracked independently in [Issue #22](https://github.com/Missel2/s7-compatibility-lab/issues/22).
+
+```sh
+(cd java/plc4x-0.13.1 && mvn --batch-mode --no-transfer-progress org.apache.maven.plugins:maven-dependency-plugin:3.9.0:build-classpath -Dmdep.outputFile=target/classpath.txt)
+node scripts/assess-plc4x-historical-close.cjs
+```

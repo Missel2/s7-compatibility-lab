@@ -105,9 +105,9 @@ function javaClasspath(){
  assert.equal(observedJarSha256,pinned,"Upstream PLC4X Maven artifact does not match reviewed SHA256");
  return {cp:classes+path.delimiter+cp,driverJarSha256:observedJarSha256};
 }
-async function runJava(cp,port,head){
+async function runJava(cp,port,head,entrypoint="org.rischlab.s7lab.Plc4xReadonlyS7Candidate"){
  const child=spawn("java",["-Xms32m","-Xmx256m","-cp",cp,
-  "org.rischlab.s7lab.Plc4xReadonlyS7Candidate","--port",String(port)],{
+  entrypoint,"--port",String(port)],{
   cwd:root,env:{...process.env,S7_LAB_SOURCE_SHA:head},stdio:["ignore","pipe","pipe"]});
  let stdout=Buffer.alloc(0),stderr=Buffer.alloc(0),truncated=false;
  const append=(b,x)=>{if(b.length+x.length>65536)truncated=true;return Buffer.concat([b,x.subarray(0,Math.max(0,65536-b.length))]);};

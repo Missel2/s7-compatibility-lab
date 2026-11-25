@@ -64,13 +64,22 @@ function parseReadItems(frame){
   const address=bitAddress/8;
   assert.ok([0,4,8].includes(address),"No requests outside three fixed synthetic values");
   const announced=frame.readUInt16BE(offset+4);
+  const type=frame[offset+3];
+  const fieldSize=address===4?2:4;
+  if(type!==2){
+   // PLC4X 0.13.1 sends one typed element for each fixed field.
+   const fieldType=address===4?0x05:0x08; // INT or REAL
+   assert.equal(type,fieldType,"Unexpected S7ANY type for fixed synthetic field");
+   assert.equal(announced,1,"Expected a single typed S7ANY element");
+   items.push({address,size:fieldSize});
+   continue;
+  }
   // Published PLC4X 1.0.0 coalesces REAL0, INT4 and REAL8 into one
   // 12-byte S7ANY READ_VAR item (actual original request: 04 01 12 0a
   // 10 02 00 0c 00 01 84 00 00 00). This is NOT three S7ANY items.
-  const singleContiguous=address===0&&announced===12&&frame[offset+3]===2;
-  const size=singleContiguous?12:(address===4?2:4);
+  const singleContiguous=address===0&&announced===12;
+  const size=singleContiguous?12:fieldSize;
   assert.ok(singleContiguous||[1,size].includes(announced),"Unsupported ANY element count");
-  assert.equal(frame[offset+3],2,"Only byte-oriented, synthetic S7ANY reads permitted");
   items.push({address,size});
  }
  assert.equal(new Set(items.map(x=>x.address)).size,items.length,"Duplicate READ_VAR items");
