@@ -6,6 +6,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const {digest} = require("../fixtures/independent-cotp-s7-server.cjs");
+const {verifyReadReplyDelivery} = require("../lib/verify-split-read-reply.cjs");
 
 const srcFixture = path.join(__dirname, "../fixtures/independent-cotp-s7-server.cjs");
 const knownDriver = "907aa658a3040c86ff2fe7b94625d1537084ed3822dc4e9cd7f78dedc5ebe7d7";
@@ -83,6 +84,7 @@ function verifyCapture(report, raw, stderr, head, mode) {
  assert.equal(read.subarray(17).toString("hex"),"0401120a1002000c000184000000",
   "Exact published PLC4X one-item contiguous synthetic DB1[0:12] READ_VAR");
  const reply=frame(s.sent[2]);
+ verifyReadReplyDelivery(reply,s.readReplyWrites,report.splitReadReply);
  assert.equal(reply[8],3);assert.equal(reply[19],4);assert.equal(reply[20],1);
  assert.equal(reply.subarray(21).toString("hex"),"ff04006041480000ff85060740500000",
   "Independent Node response must contain exactly the expected 12 real synthetic bytes");
