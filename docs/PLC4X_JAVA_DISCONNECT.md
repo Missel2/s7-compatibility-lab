@@ -88,3 +88,9 @@ PLC4X 0.13.1 closes without a Disconnect Request in this run. It therefore does 
 (cd java/plc4x-0.13.1 && mvn --batch-mode --no-transfer-progress org.apache.maven.plugins:maven-dependency-plugin:3.9.0:build-classpath -Dmdep.outputFile=target/classpath.txt)
 node scripts/assess-plc4x-historical-close.cjs
 ```
+
+### Split READ_VAR reply
+
+Each assessment includes an additional run in which the same valid READ_VAR response is sliced at offsets 2 and 26. The first boundary is inside the TPKT header and the second is inside the first DB1 REAL value. The Node peer submits the three writes with 35 ms between successive writes. The verifier checks the offsets, exact bytes, SHA-256 digests and measured delays against the complete response. The original Java values independently establish that the client consumed the response. The recorded boundaries describe fixture writes. TCP segment sizes and Java read boundaries are not measured here.
+
+The split run preserves each release's own close contract. A correct split read from 1.0.0 still requires independent evidence of its known 21-byte close violation and strict exit 1 for this characterization. The historical run still requires FIN, no COTP DR and no unframed trailer. Neither result qualifies a release for hardware. Artifacts include `plc4x-node-peer-silence-split-*` and `plc4x-0131-split-*` alongside the intact-response controls.

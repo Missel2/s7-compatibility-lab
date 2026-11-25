@@ -42,7 +42,7 @@ function specimen(mode="silence",withTrailer=true){
   }
  }
  const session={session:1,phase:"COTP_DISCONNECTED",closed:true,sawFin:true,closeHadError:false,
-  received:[...received],sent:[...out],events,
+  received:[...received],sent:[...out],events,readReplyWrites:[],
   connections:1,setup:1,reads:1,writes:0,disconnects:1,validRead:true,errors:[],
   invalidTail:withTrailer?{direction:"client-to-server",afterCotpDisconnect:true,bytes:21,
    totalObserved:21,sha256:knownTailSha,allZero:true,rawHex:"00".repeat(21),prefixHex:"00".repeat(21),
@@ -50,7 +50,7 @@ function specimen(mode="silence",withTrailer=true){
  const stderr=Buffer.from("Original Java diagnostic\n");
  const report={schemaVersion:1,sourceCommit:head,scope:"SOFTWARE_LOOPBACK_ONLY",
   serverImplementation:"INDEPENDENT_NODE_COTP_S7COMM",serverDependency:"NODE_BUILTINS_ONLY",
-  serverSourceSha256:digest(fs.readFileSync(fixtureSource)),disconnectMode:mode,
+  serverSourceSha256:digest(fs.readFileSync(fixtureSource)),disconnectMode:mode,splitReadReply:false,
   candidate:"org.apache.plc4x:plc4j-driver-s7:1.0.0",
   driverJarSha256:driverSha,javaMajor:21,candidateQualified:false,
   originalJavaExit:0,originalSignal:null,originalTimedOut:false,originalTruncated:false,

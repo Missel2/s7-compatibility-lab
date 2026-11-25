@@ -38,6 +38,8 @@ function characterize(capture, javaStdout, javaStderr, strict, head, mode) {
  });
  return {
   mode,classification:"KNOWN_UNSAFE",readValues:true,readVar:1,writeVar:0,disconnect:1,
+  splitReadReply:report.splitReadReply,
+  readReplyWriteLengths:report.session.readReplyWrites.map(write=>write.hex.length/2),
   originalJavaExit:report.originalJavaExit,originalStrictCandidateExit:strict.status,
   invalidTrailerBytes:trailer.bytes,invalidTrailerSha256:trailer.sha256,
   captureSha256:digest(capture),originalStrictStdoutSha256:digest(strict.stdout),
@@ -61,21 +63,21 @@ async function poll(fn,what){
  throw Error("TIMEOUT "+what);
 }
 
-async function one(mode,head,classpath,serverSourceSha256){
- const prefix="plc4x-node-peer-"+mode;
+async function one(mode,head,classpath,serverSourceSha256,splitReadReply=false){
+ const prefix="plc4x-node-peer-"+mode+(splitReadReply?"-split":"");
  const file=suffix=>path.join(outputDir,prefix+suffix);
  const originalPath=file("-original.json");
  const stderrPath=file("-stderr.log");
  const capturePath=file("-capture.json");
  const report={schemaVersion:1,sourceCommit:head,scope:"SOFTWARE_LOOPBACK_ONLY",
   serverImplementation:"INDEPENDENT_NODE_COTP_S7COMM",serverDependency:"NODE_BUILTINS_ONLY",
-  serverSourceSha256,disconnectMode:mode,candidate:"org.apache.plc4x:plc4j-driver-s7:1.0.0",
+  serverSourceSha256,disconnectMode:mode,splitReadReply,candidate:"org.apache.plc4x:plc4j-driver-s7:1.0.0",
   driverJarSha256:classpath.driverJarSha256,javaMajor:21,candidateQualified:false,
   hardware:"PENDING_HARDWARE",captureId:randomUUID(),serverStopped:false};
  const assessment={sourceCommit:head,disconnectMode:mode,classification:"UNASSESSED",candidateQualified:false};
  let server;
  try {
-  server=await startIndependentS7Server({disconnectMode:mode});
+  server=await startIndependentS7Server({disconnectMode:mode,splitReadReply});
   const java=await runJava(classpath.cp,server.port,head);
   fs.writeFileSync(originalPath,java.stdout);
   fs.writeFileSync(stderrPath,java.stderr);
@@ -140,9 +142,11 @@ async function main(){
   if(result)results.push(result);
  }
  if(results.length!==2)throw Error("Both independent Node COTP modes require actual Java exit and evidence; obtained "+results.length);
+ const splitRead=await one("silence",head,cp,fixtureHash,true);
+ assert.ok(splitRead,"Split READ_VAR reply requires actual Java exit and evidence");
  const output={schemaVersion:1,sourceCommit:head,scope:"SOFTWARE_LOOPBACK_ONLY",
   comparison:"SECOND_INDEPENDENT_COTP_S7_SERVER_NOT_PYTHON_SNAP7",candidateQualified:false,
-  fixtureSourceSha256:fixtureHash,modes:results};
+  fixtureSourceSha256:fixtureHash,modes:results,splitRead};
  fs.writeFileSync(path.join(outputDir,"plc4x-node-peer-comparison.json"),JSON.stringify(output,null,2)+"\n");
  console.log("PLC4X_SECOND_INDEPENDENT_FIXTURE_COMPARISON="+JSON.stringify(output));
 }

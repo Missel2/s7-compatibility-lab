@@ -9,6 +9,7 @@ const net=require("node:net");
 const {setTimeout:delay}=require("node:timers/promises");
 const {startIndependentS7Server,tpkt,digest}=require("../fixtures/independent-cotp-s7-server.cjs");
 const {verifyHistoricalCapture}=require("../scripts/assess-plc4x-historical-close.cjs");
+const {verifyReadReplyDelivery}=require("../lib/verify-split-read-reply.cjs");
 const host="127.0.0.1";
 const zero=Buffer.alloc(21);
 function job(ref,params){
@@ -23,8 +24,8 @@ const cr=Buffer.from("0300001611e00000000100c1020100c2020102c0010a","hex");
 const setup=job(1,Buffer.from([0xf0,0,0,1,0,1,1,0xe0]));
 const read=job(2,Buffer.concat([Buffer.from([4,3]),any(0,4),any(4,2),any(8,4)]));
 const dr=Buffer.from("0300000b06800000000000","hex");
-async function session({mode="silence",parts=[],readFrame=read,writeAfter=false,sendDisconnect=true}={}){
- const fixture=await startIndependentS7Server({disconnectMode:mode});
+async function session({mode="silence",parts=[],readFrame=read,writeAfter=false,sendDisconnect=true,splitReadReply=false}={}){
+ const fixture=await startIndependentS7Server({disconnectMode:mode,splitReadReply});
  const socket=net.createConnection({host,port:fixture.port});
  socket.on("error",()=>{});
  let buffer=Buffer.alloc(0);const responses=[];
@@ -112,7 +113,7 @@ test("historical PLC4X typed REAL/INT/REAL request reads the same synthetic fiel
   observed:{real0:12.5,int4:-123,real8:3.25}}));
  const stderr=Buffer.alloc(0);
  const capture={
-  version:"0.13.1", sourceCommit:head, driver:"org.apache.plc4x:plc4j-driver-s7:0.13.1",
+  version:"0.13.1", sourceCommit:head, driver:"org.apache.plc4x:plc4j-driver-s7:0.13.1", splitReadReply:false,
   driverJarSha256:"7be84d58e3f06666df63ed64e55821153bf663c3d4c5855d846a7617b0dcc89a",
   fixtureSourceSha256:digest(fs.readFileSync(require.resolve("../fixtures/independent-cotp-s7-server.cjs"))),
   java:{code:0,signal:null,timedOut:false,truncated:false,stdoutSha256:digest(stdout),stderrSha256:digest(stderr)},
@@ -130,6 +131,20 @@ test("historical PLC4X typed REAL/INT/REAL request reads the same synthetic fiel
  const rejected=await session({readFrame:wrongCount,writeAfter:true});
  assert.equal(rejected.record.reads,0);
  assert.match(rejected.record.errors[0],/single typed S7ANY element/);
+});
+test("split read response retains the exact normal frame and measured write delays",async()=>{
+ const normal=await session();
+ const split=await session({splitReadReply:true});
+ assert.deepEqual(split.frames,normal.frames);
+ assert.deepEqual(split.record.errors,[]);
+ const writes=split.record.readReplyWrites;
+ assert.deepEqual(verifyReadReplyDelivery(split.frames[2],writes,true),[2,24,17]);
+ for(const change of [{elapsedUs:writes[0].elapsedUs},{hex:"00"},{offset:3}]){
+  const forged=[writes[0],{...writes[1],...change},writes[2]];
+  assert.throws(()=>verifyReadReplyDelivery(split.frames[2],forged,true));
+ }
+ assert.throws(()=>verifyReadReplyDelivery(split.frames[2],writes.slice(0,2),true));
+ assert.throws(()=>verifyReadReplyDelivery(split.frames[2],writes,false));
 });
 test("independent second server observes all 21 malformed bytes, not just the first TCP event",async()=>{
  const joined=await session({parts:[zero]});

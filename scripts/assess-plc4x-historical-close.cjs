@@ -7,6 +7,7 @@ const {execFileSync} = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const {digest, startIndependentS7Server} = require("../fixtures/independent-cotp-s7-server.cjs");
+const {verifyReadReplyDelivery} = require("../lib/verify-split-read-reply.cjs");
 const {runJava} = require("./assess-plc4x-java-client.cjs");
 
 const root = path.resolve(__dirname, "..");
@@ -79,14 +80,43 @@ function verifyHistoricalCapture(capture, stdout, stderr) {
   assert.equal(setupAck[19], 0xf0);
   assert.equal(read.subarray(17).toString("hex"), readParameters);
   assert.equal(ack.subarray(19).toString("hex"), readReply);
+  const readReplyWriteLengths = verifyReadReplyDelivery(ack, session.readReplyWrites, capture.splitReadReply);
   return {
     sourceCommit: capture.sourceCommit, scope: "SOFTWARE_LOOPBACK_ONLY",
     outcome: "NOT_OBSERVED_UNSAFE", observation: "TCP_FIN_WITHOUT_COTP_DR",
     driver: capture.driver, driverJarSha256: capture.driverJarSha256,
     javaExit: capture.java.code, cotpDisconnectRequests: 0,
+    splitReadReply: capture.splitReadReply, readReplyWriteLengths,
     readRequests: 1, writeRequests: 0, unframedTrailerBytes: 0,
     drDcExercised: false, candidateQualified: false, hardware: "PENDING_HARDWARE",
   };
+}
+
+async function measure({cp, sourceCommit, driverJarSha256}, out, splitReadReply) {
+  const prefix = splitReadReply ? "plc4x-0131-split-" : "plc4x-0131-";
+  const save = (suffix, data) => fs.writeFileSync(path.join(out, prefix + suffix), data);
+  const server = await startIndependentS7Server({splitReadReply});
+  let java;
+  try {
+    java = await runJava(cp, server.port, sourceCommit, path.join(project, "Plc4xHistoricalRead.java"));
+  } finally {
+    await server.stop();
+  }
+  const {stdout, stderr, ...processResult} = java;
+  const capture = {
+    version, sourceCommit, splitReadReply,
+    driver,
+    driverJarSha256, fixtureSourceSha256: digest(fs.readFileSync(fixture)),
+    java: {...processResult, stdoutSha256: digest(stdout), stderrSha256: digest(stderr)},
+    sessions: server.sessions,
+  };
+  const bytes = Buffer.from(JSON.stringify(capture, null, 2) + "\n");
+  save("java-stdout.json", stdout);
+  save("java-stderr.log", stderr);
+  save("capture.json", bytes);
+  const verdict = {...verifyHistoricalCapture(capture, stdout, stderr), captureSha256: digest(bytes)};
+  save("assessment.json", JSON.stringify(verdict, null, 2) + "\n");
+  console.log("PLC4X_HISTORICAL_CLOSE=" + JSON.stringify(verdict));
 }
 
 async function main() {
@@ -104,29 +134,14 @@ async function main() {
 
   const out = path.join(root, "test-reports");
   fs.mkdirSync(out, {recursive: true});
-  const save = (suffix, data) => fs.writeFileSync(path.join(out, "plc4x-0131-" + suffix), data);
-  const server = await startIndependentS7Server();
-  let java;
-  try {
-    java = await runJava(cp, server.port, sourceCommit, path.join(project, "Plc4xHistoricalRead.java"));
-  } finally {
-    await server.stop();
+  for (const name of fs.readdirSync(out)) {
+    if (/^plc4x-0131-(?:split-)?(?:assessment|capture|java-stdout)\.json$|^plc4x-0131-(?:split-)?java-stderr\.log$/.test(name)) {
+      fs.rmSync(path.join(out, name));
+    }
   }
-  const {stdout, stderr, ...processResult} = java;
-  const capture = {
-    version, sourceCommit,
-    driver,
-    driverJarSha256, fixtureSourceSha256: digest(fs.readFileSync(fixture)),
-    java: {...processResult, stdoutSha256: digest(stdout), stderrSha256: digest(stderr)},
-    sessions: server.sessions,
-  };
-  const bytes = Buffer.from(JSON.stringify(capture, null, 2) + "\n");
-  save("java-stdout.json", stdout);
-  save("java-stderr.log", stderr);
-  save("capture.json", bytes);
-  const verdict = {...verifyHistoricalCapture(capture, stdout, stderr), captureSha256: digest(bytes)};
-  save("assessment.json", JSON.stringify(verdict, null, 2) + "\n");
-  console.log("PLC4X_HISTORICAL_CLOSE=" + JSON.stringify(verdict));
+  const candidate = {cp, sourceCommit, driverJarSha256};
+  await measure(candidate, out, false);
+  await measure(candidate, out, true);
 }
 
 if (require.main === module) {

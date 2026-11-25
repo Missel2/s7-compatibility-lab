@@ -130,18 +130,21 @@ function classify(frame,phase){
  assert.equal(frame[17],4,"WRITE_VAR is forbidden");
  return {next:"READY",kind:"S7_READ_VAR",response:readReply(frame)};
 }
-async function startIndependentS7Server({disconnectMode="silence"}={}){
+async function startIndependentS7Server({disconnectMode="silence",splitReadReply=false}={}){
  assert.ok(["silence","confirm"].includes(disconnectMode));
+ assert.equal(typeof splitReadReply,"boolean");
  const sessions=[],sockets=new Set();
  const server=net.createServer({allowHalfOpen:true},socket=>{
   const id=sessions.length+1;
   const s={session:id,phase:"EXPECT_COTP_CR",received:[],sent:[],events:[],
    connections:0,setup:0,reads:0,writes:0,disconnects:0,
-   invalidTail:null,errors:[],closed:false,sawFin:false,closeHadError:null,validRead:false};
+   invalidTail:null,errors:[],closed:false,sawFin:false,closeHadError:null,validRead:false,
+   readReplyWrites:[]};
   sessions.push(s);sockets.add(socket);
   socket.setNoDelay(true);
   socket.setTimeout(15000,()=>{s.errors.push("SOCKET_IDLE_TIMEOUT");socket.destroy();});
   let pending=Buffer.alloc(0),unframed=false,unframedTotal=0,malformed=[],malformedTimer=null,malformedOverflow=false;
+  let readReplyTimer=null;
   function observe(direction,packet){
    s.events.push({direction,length:packet.length,sha256:digest(packet)});
    assert.ok(s.events.length<=128,"Exceeded bounded wire event count");
@@ -157,7 +160,33 @@ async function startIndependentS7Server({disconnectMode="silence"}={}){
     truncated:malformedOverflow,termination:origin,totalObserved:unframedTotal};
   }
   function failed(error){s.errors.push(String(error.message||error).slice(0,300));socket.destroy();}
-  function send(packet){observe("server_tx",packet);s.sent.push(packet.toString("hex"));socket.write(packet);}
+  function send(packet,kind){
+   observe("server_tx",packet);
+   s.sent.push(packet.toString("hex"));
+   if(kind!=="S7_READ_VAR"||!splitReadReply){
+    socket.write(packet);
+    return;
+   }
+   // Split inside the TPKT header, then inside the first DB1 value.
+   // The schedule describes server writes, not TCP segment boundaries.
+   const offsets=[0,2,26,packet.length];
+   assert.ok(packet.length>26);
+   const start=process.hrtime.bigint();
+   function writePart(index){
+    if(socket.destroyed)return;
+    const offset=offsets[index];
+    const bytes=packet.subarray(offset,offsets[index+1]);
+    socket.write(bytes);
+    s.readReplyWrites.push({
+     offset,hex:bytes.toString("hex"),sha256:digest(bytes),
+     elapsedUs:Number((process.hrtime.bigint()-start)/1000n)
+    });
+    readReplyTimer=index+2<offsets.length
+     ?setTimeout(()=>writePart(index+1),35)
+     :null;
+   }
+   writePart(0);
+  }
   socket.on("data",chunk=>{
    try {
     if(unframed){
@@ -181,6 +210,7 @@ async function startIndependentS7Server({disconnectMode="silence"}={}){
      const len=pending.readUInt16BE(2);
      assert.ok(len>=7&&len<=MAX_TPKT,"Unbounded or invalid TPKT length");
      if(pending.length<len)break;
+     assert.equal(readReplyTimer,null,"New frame before split reply completed");
      const packet=Buffer.from(pending.subarray(0,len));
      pending=pending.subarray(len);
      observe("client_rx",packet);
@@ -191,7 +221,7 @@ async function startIndependentS7Server({disconnectMode="silence"}={}){
      if(reply.kind==="S7_SETUP")s.setup++;
      if(reply.kind==="S7_READ_VAR"){s.reads++;s.validRead=true;}
      if(reply.kind==="COTP_DR")s.disconnects++;
-     if(reply.response)send(reply.response);
+     if(reply.response)send(reply.response,reply.kind);
      if(reply.kind==="COTP_DR"&&disconnectMode==="confirm")send(cotpDisconnectConfirm(packet));
     }
    }catch(e){failed(e)}
@@ -203,6 +233,10 @@ async function startIndependentS7Server({disconnectMode="silence"}={}){
    socket.end();
   });
   socket.once("close",hadError=>{
+   if(readReplyTimer!==null){
+    clearTimeout(readReplyTimer);
+    s.errors.push("SPLIT_READ_REPLY_NOT_FULLY_WRITTEN");
+   }
    if(unframed)closeTail("TCP_CLOSE");
    s.closeHadError=hadError;
    s.closed=true;
