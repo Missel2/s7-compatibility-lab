@@ -32,10 +32,8 @@ This proves a **version-/fixture-specific protocol-close defect signature**, not
 
 ## Follow-up work
 
-1. Confirm the malformed trailer with an independent packet capture / minimal COTP peer and a distinct fixture implementation to rule out interaction artifacts.
-2. Investigate PLC4X 1.0.0 closing handshake/Netty buffer write path; reproduce in a minimal documented unit test before proposing an upstream fix. Do **not** modify or vendor published Apache driver code in the lab.
-3. Use an actually corrected published future PLC4X release against the same strict oracle; require red-on-current/green-on-fixed without suppressing old evidence.
-4. Add further Java data reads/writes, error injection, boundary tests **only after** platform/fixture compatibility and clear error classification, with the existing non-TPKT trailer kept as a separate failing lifecycle contract.
+1. Replay the exact read and disconnect contract against the preceding release and the first release containing an upstream correction. Preserve the original 1.0.0 strict exit and raw evidence.
+2. Apply the same strict peer contract to the corrected driver's actual TCP output and clean FIN before recording a version-specific result.
 
 ## Falsification against a separate server implementation (PR #23)
 
@@ -50,7 +48,7 @@ Actual independent results were identical in both COTP close policies:
 
 For each case, published Java exits 0, the malformed tail violates the strict read+close contract, and the actual payload digest is `c90232586b801f9558a76f2f963eccd831d9fe6775e4c8f1446b2331aa2132f2`. [Original raw Java process reports, actual COTP/S7 requests/responses and SHA evidence](https://github.com/Missel2/s7-compatibility-lab/actions/runs/44050053619/artifacts/14313550909) retain the exact test-merge source SHA. Additional false-byte, unsupported WRITE_VAR, extra/fake-packet and TCP-fragmentation controls must fail. No new comparison-matrix PASS is generated: this tests a *second server*, not a sixth client or new S7Comm operation.
 
-**Interpretation:** a defect specific to the original Python Snap7 fixture or earlier Node relay is now much less plausible. A published PLC4X 1.0.0 teardown/serialization issue is supported for these software-only environments, but the actual root code defect, other PLC4X versions, and Siemens physical CPUs remain unverified. See [Issue #22](https://github.com/Missel2/s7-compatibility-lab/issues/22) and [PR #23](https://github.com/Missel2/s7-compatibility-lab/pull/23) (unmerged).
+Both fixtures observe the same client-side behavior. The release source and serializer experiment below identify the concrete cause for 1.0.0. [Issue #22](https://github.com/Missel2/s7-compatibility-lab/issues/22)
 
 
 ## Measured strict verdict on the independent peer
@@ -58,3 +56,19 @@ For each case, published Java exits 0, the malformed tail violates the strict re
 For each peer policy the runner records the Java stdout and stderr, then waits for the client FIN, closes the fixture listener and archives the complete session capture. A separate Node process runs `scripts/check-plc4x-node-peer.cjs` against those files. It exits **0** for a clean close, **1** for validated unframed client bytes after the DR, and **2** for invalid or incomplete evidence. The baseline characterization accepts only the actual child exit **1**, empty strict stderr, an input-bound strict JSON verdict and the exact 21-zero-byte fingerprint.
 
 The artifact contains the original Java output, both strict output streams, measured process status and signal, raw framed packets and complete raw trailer bytes. SHA-256 binds the strict verdict to the exact capture and Java output. The short-lived fixture must observe a clean FIN, one TCP session, one read, zero writes and the expected DR/DC sequence. The earlier independent run above captured the same raw wire defect before this separate strict process was introduced. The original Python-fixture candidate check remains red.
+
+## Source-to-wire proof on PLC4X 1.0.0
+
+`CotpTransportInstance.close()` serializes an 11-byte TPKT Disconnect Request into a zero-initialized 32-byte buffer and hands the whole array to the TCP transport. `TcpTransportInstance.write()` wraps that array in a `ByteBuffer` and drains it directly to a Java NIO `SocketChannel`. Buffer sizing in COTP accounts for all 21 extra bytes. [Released COTP source](https://github.com/apache/plc4x/blob/ea229918f5d07700e04d7d69ab1645da679cb700/plc4j/transports/cotp/src/main/java/org/apache/plc4x/java/transport/cotp/CotpTransportInstance.java) · [Released TCP source](https://github.com/apache/plc4x/blob/ea229918f5d07700e04d7d69ab1645da679cb700/plc4j/transports/tcp/src/main/java/org/apache/plc4x/java/transport/tcp/TcpTransportInstance.java)
+
+The Java reproducer calls the released serializer twice with the same Disconnect Request. It uses the original 32-byte allocation and then allocates `getLengthInBytes()` as a correction control. The verifier pins the runtime S7 driver, COTP, TCP and byte buffer JARs. It matches the complete 32 bytes against the framed DR and raw TCP tail in both independently captured sessions. The 11-byte control must match both captured DRs byte for byte. The experiment runs released libraries and evaluates the proposed change at the serialization boundary. Validation of a corrected driver still requires a full TCP session with that build.
+
+Reproduce with Java 21, Maven and Node.js from the repository root.
+
+```sh
+(cd java/plc4x-readonly-client && mvn --batch-mode --no-transfer-progress package dependency:build-classpath -Dmdep.outputFile=target/classpath.txt)
+node scripts/assess-plc4x-independent-node-peer.cjs
+node scripts/verify-plc4x-disconnect-serializer.cjs
+```
+
+The original captures, measured strict results and serializer reports are written to `test-reports/`. Both strict 1.0.0 results remain exit 1 with `KNOWN_UNSAFE` characterization. Hardware coverage is `PENDING_HARDWARE`.

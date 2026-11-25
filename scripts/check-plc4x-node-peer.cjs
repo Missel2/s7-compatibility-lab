@@ -34,6 +34,7 @@ function verifyCapture(report, raw, stderr, head, mode) {
  assert.equal(report.originalTruncated,false);
  assert.equal(report.originalSha256,digest(raw));
  assert.equal(report.originalStderrSha256,digest(stderr));
+ assert.match(report.captureId,/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
  assert.equal(report.sessionCount,1);
  assert.equal(report.serverStopped,true);
  const original=JSON.parse(raw.toString("utf8"));

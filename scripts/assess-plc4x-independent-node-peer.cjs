@@ -121,7 +121,8 @@ async function one(mode,head,classpath,serverSourceSha256){
 async function main(){
  const head=execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim();
  assert.match(head,sha);
- if(process.env.GITHUB_SHA)assert.equal(process.env.GITHUB_SHA,head);
+ const expectedHead=process.env.S7_LAB_EXPECTED_SHA ?? process.env.GITHUB_SHA;
+ if(expectedHead)assert.equal(head,expectedHead);
  assert.equal(process.platform,"linux");assert.equal(process.arch,"x64");
  assert.equal(Number(/^javac (\d+)/.exec(execFileSync("javac",["-version"],{encoding:"utf8"}))?.[1]),21);
  fs.mkdirSync(outputDir,{recursive:true});
