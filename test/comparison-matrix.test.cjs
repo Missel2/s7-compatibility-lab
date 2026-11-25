@@ -26,7 +26,7 @@ test('five exact client identities, all evidence links and schema validate',()=>
   assert.equal(ack.cells.find(x=>x.candidate==='rust-1_4_0').outcome,'KNOWN_UNSAFE');
   const javaRead=m.rows.find(x=>x.id==='READ_HEALTHY_DB1').cells.find(x=>x.candidate==='apache-plc4x-java-1_0_0');
   assert.equal(javaRead.outcome,'KNOWN_UNSAFE');
-  assert.equal(javaRead.phase,'PR_OPEN');
+  assert.equal(javaRead.phase,'MERGED_BASELINE');
   assert.match(javaRead.evidence.assertion,/original strict assessor exit 1/);
   assert.equal(m.completeComparisonScenarios.length,0);
 });
