@@ -6,9 +6,16 @@
   "sourcePath": "plc4j/transports/cotp/src/main/java/org/apache/plc4x/java/transport/cotp/CotpTransportInstance.java",
   "sourceBlobSha1": "63b501c8cdfb8216e3fd0707d61681991d74e1d6",
   "sourceUrl": "https://github.com/apache/plc4x/blob/ea229918f5d07700e04d7d69ab1645da679cb700/plc4j/transports/cotp/src/main/java/org/apache/plc4x/java/transport/cotp/CotpTransportInstance.java",
+  "tcpSourceBlobSha1": "12f9d6285d400c6894256469814d303ea0abc83d",
+  "tcpSourceUrl": "https://github.com/apache/plc4x/blob/ea229918f5d07700e04d7d69ab1645da679cb700/plc4j/transports/tcp/src/main/java/org/apache/plc4x/java/transport/tcp/TcpTransportInstance.java",
   "sourceFinding": "In CotpTransportInstance.close(), the COTP DisconnectRequest is wrapped in TPKTPacket, serialized into a fixed 32-byte WriteBufferByteBased, then the entire byte array is sent via tcpTransport.write. The generated model reports a true TPKT length of 11 bytes. The other CR/DT paths in this exact source use getLengthInBytes() and allocate the correct size.",
   "publishedDriverJarSha256": "907aa658a3040c86ff2fe7b94625d1537084ed3822dc4e9cd7f78dedc5ebe7d7",
   "publishedCotpReleaseVersion": "1.0.0",
+  "transportJarSha256": {
+    "plc4j-transports-cotp": "4fdf0f6b8bba8d64649a96cabe2480c7bbddc9e2752c58a1fc2102ecbf0ed82b",
+    "plc4j-transports-tcp": "1292a953dfb8b706cd3c67549148168d1a75f4ef9f0daef0f0a9a8f3c6f4c0bb",
+    "plc4j-spi-buffers-byte": "fff4b82c91a8a6d4e7df145d23c2eefd024e9deb90c232151ac1d420b0d475a7"
+  },
   "originalAllocatedBufferBytes": 32,
   "actualSerializedTpktBytes": 11,
   "excessBytes": 21,

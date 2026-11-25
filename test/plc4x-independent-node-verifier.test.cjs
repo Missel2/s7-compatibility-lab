@@ -6,6 +6,7 @@ const fs=require("node:fs");
 const path=require("node:path");
 const os=require("node:os");
 const {characterize,runStrictProcess}=require("../scripts/assess-plc4x-independent-node-peer.cjs");
+const {verifyWireMatch}=require("../scripts/verify-plc4x-disconnect-serializer.cjs");
 const {digest}=require("../fixtures/independent-cotp-s7-server.cjs");
 const head="a".repeat(40);
 const fixtureSource=path.resolve(__dirname,"../fixtures/independent-cotp-s7-server.cjs");
@@ -54,7 +55,8 @@ function specimen(mode="silence",withTrailer=true){
   driverJarSha256:driverSha,javaMajor:21,candidateQualified:false,
   originalJavaExit:0,originalSignal:null,originalTimedOut:false,originalTruncated:false,
   originalSha256:digest(original),originalStderrSha256:digest(stderr),
-  hardware:"PENDING_HARDWARE",sessionCount:1,serverStopped:true,session};
+  hardware:"PENDING_HARDWARE",captureId:"01234567-890a-4bcd-8ef0-123456789abc",
+  sessionCount:1,serverStopped:true,session};
  return {report,original,stderr};
 }
 
@@ -184,4 +186,20 @@ test("confirm mode requires a correctly referenced COTP DC",t=>{
  assert.equal(execute(t,data,"confirm").strict.status,2);
  data.report.session.sent.pop();
  assert.equal(execute(t,data,"confirm").strict.status,2);
+});
+
+test("serializer proof must reproduce the original DR and tail from the same strict run",t=>{
+ const data=specimen("confirm");
+ const {capture,strict}=execute(t,data,"confirm");
+ const expected={
+  exactWireHex:received.at(-1),
+  originalWireHex:received.at(-1)+"00".repeat(21)
+ };
+ const verify=serializer=>verifyWireMatch(serializer,capture,data.original,data.stderr,
+  strict,head,"confirm");
+ assert.equal(verify(expected).captureSha256,digest(capture));
+ assert.throws(()=>verify({...expected,originalWireHex:expected.originalWireHex.slice(0,-2)}),
+  /byte for byte/);
+ assert.throws(()=>verify({...expected,exactWireHex:"0300000b06800000000200"}),
+  /retain the captured DR/);
 });

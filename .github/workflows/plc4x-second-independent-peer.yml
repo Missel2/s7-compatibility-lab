@@ -11,6 +11,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22.23.4'
@@ -37,7 +38,13 @@ jobs:
           sha256sum -c "$GITHUB_WORKSPACE/java/plc4x-readonly-client/plc4j-driver-s7-1.0.0.sha256"
       - name: Run actual Java client against standalone Node S7Comm server without any Snap7 dependency
         run: node scripts/assess-plc4x-independent-node-peer.cjs
+        env:
+          S7_LAB_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         timeout-minutes: 3
+      - name: Match the released COTP serializer and exact-size control to both TCP captures
+        run: node scripts/verify-plc4x-disconnect-serializer.cjs
+        env:
+          S7_LAB_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Archive exact-head Java process and independent direct-wire evidence, including red runs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -46,5 +53,6 @@ jobs:
           path: |
             test-reports/plc4x-node-peer-*.json
             test-reports/plc4x-node-peer-*.log
+            test-reports/plc4x-disconnect-serializer-*.json
           if-no-files-found: warn
           retention-days: 14
